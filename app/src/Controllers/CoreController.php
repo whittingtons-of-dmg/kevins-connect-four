@@ -6,8 +6,6 @@ use MediumDubb\ConnectFour\Database\PDOConnector;
 use MediumDubb\ConnectFour\Domains\Player;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
-use MediumDubb\ConnectFour\Repositories\PlayerRepo;
-use MediumDubb\ConnectFour\Repositories\TokenRepo;
 use MediumDubb\ConnectFour\Services\SessionService;
 
 class CoreController
@@ -51,30 +49,18 @@ class CoreController
         $this->session->clear();
     }
 
-    public function getPlayerRepo(): PlayerRepo
-    {
-        return new PlayerRepo();
-    }
-
-    public function getBoardRepo(): BoardRepo
-    {
-        return new BoardRepo();
-    }
-
-    public function getTokenRepo(): TokenRepo
-    {
-        return new TokenRepo();
-    }
-
     protected function getBaseURI(): string
     {
         return $_SERVER['REQUEST_SCHEME'] . "://" . $_SERVER['SERVER_NAME'] . "/";
     }
 
+    /**
+     * @throws ApiException
+     */
     protected function validatePlayerSession(string $room_id): bool
     {
         if ($session_uid = $this->getUid()) {
-            $board_users = $this->getBoardRepo()->getRoomPlayerIDs($room_id);
+            $board_users = new BoardRepo()->getRoomPlayerIDs($room_id);
             if (is_array($board_users)) {
                 return in_array($session_uid, $board_users);
             }

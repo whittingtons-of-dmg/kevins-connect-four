@@ -24,7 +24,7 @@ $router = AppRouter::getRouter();
 // Define your routes here
 $router->get('/', [new PageController(), 'index']);
 $router->get('/join-room', [new GameApiController(), 'join']);
-$router->get('/get-board-state', [new GameApiController(), 'getBoardSate']);
+$router->get('/get-board-state', [new GameApiController(), 'getBoardState']);
 $router->get('/drop-token', [new GameApiController(), 'dropToken']);
 
 $router->post('/create-room', [new GameApiController(), 'create']);
