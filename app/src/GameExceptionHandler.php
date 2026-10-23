@@ -3,19 +3,23 @@
 namespace MediumDubb\ConnectFour;
 
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\Exceptions\GameConflictException;
+use MediumDubb\ConnectFour\Exceptions\GameFaultException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
+use MediumDubb\ConnectFour\Exceptions\NotFoundException;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
-class GameExceptionHandler
+readonly class GameExceptionHandler
 {
-    public function __construct(private readonly LoggerInterface $logger){}
+    public function __construct(private LoggerInterface $logger){}
 
     public function handle(Throwable $exception): void
     {
         $status = 500;
 
         $response = [
+            'code' => $status,
             'error' => [
                 'message' => 'An unexpected error has occurred',
             ]
@@ -23,14 +27,21 @@ class GameExceptionHandler
 
         if ($exception instanceof ApiException) {
             $status = $exception->getStatusCode();
-
+            $response['code'] = $status;
             $response['error']['message'] = $exception->getMessage();
 
-            if ($exception instanceof GameValidationException) {
+            if ($exception instanceof GameValidationException ||
+                $exception instanceof GameConflictException ||
+                $exception instanceof NotFoundException ||
+                $exception instanceof GameFaultException) {
                 $status = $exception->getStatusCode();
-
+                $response['code'] = $status;
                 $response['error']['message'] = $exception->getMessage();
+                if (!empty($exception->getErrors())) {
+                    $response['error']['details'] = $exception->getErrors();
+                }
             }
+
         }
 
         if ($status >= 500) {
