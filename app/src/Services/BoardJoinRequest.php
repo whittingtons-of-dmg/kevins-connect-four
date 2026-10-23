@@ -22,19 +22,19 @@ final class BoardJoinRequest
         $boardId = $_GET[self::BOARD_PARAM] ?? null;
 
         if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-            throw new ApiException("InvalidRequest", "Invalid request method", 405);
+            throw new ApiException( "Invalid request method", 405);
         }
 
         if (
             $boardId === null || $boardId === ''
         ) {
-            throw new ApiException("InvalidRequest", "Incomplete token request", 400);
+            throw new ApiException( "Incomplete token request", 400);
         }
 
         if (
             (!filter_var($boardId, FILTER_VALIDATE_INT) || $boardId === '0' )
         ) {
-            throw new ApiException("InvalidRequest", "Invalid token request", 400);
+            throw new ApiException("Invalid token request", 400);
         }
 
         return new self(

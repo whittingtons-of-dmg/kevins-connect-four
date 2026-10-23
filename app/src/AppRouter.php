@@ -1,6 +1,8 @@
 <?php
 
-namespace MediumDubb\ConnectFour\Core;
+namespace MediumDubb\ConnectFour;
+
+use JetBrains\PhpStorm\NoReturn;
 
 class AppRouter
 {
@@ -118,7 +120,8 @@ class AppRouter
         self::$routes[$method][$route] = $action;
     }
 
-    private function abort()
+    #[NoReturn]
+    private function abort(): void
     {
         http_response_code(404);
         echo "404 Page not found";

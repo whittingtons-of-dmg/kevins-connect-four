@@ -1,17 +1,19 @@
 <?php
 
-namespace MediumDubb\ConnectFour\Controllers;
+namespace MediumDubb\ConnectFour;
 
 use JetBrains\PhpStorm\NoReturn;
 use MediumDubb\ConnectFour\Domains\Board;
+use MediumDubb\ConnectFour\Domains\Player;
 use MediumDubb\ConnectFour\DTO\BoardResponse;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Services\BoardCreateRequest;
 use MediumDubb\ConnectFour\Services\BoardJoinRequest;
 use MediumDubb\ConnectFour\Services\BoardStateRequest;
+use MediumDubb\ConnectFour\Services\SessionService;
 use MediumDubb\ConnectFour\Services\TokenHandler;
 
-class GameApiController extends CoreController
+class GameApiController
 {
     /**
      * I'd make the refactor in this order:
@@ -23,6 +25,8 @@ class GameApiController extends CoreController
      *
      * Write tests around the win-condition bug in TokenHandler.
      */
+
+    private const string UID_KEY = 'UID';
 
     public function dropToken(): void
     {
@@ -86,5 +90,24 @@ class GameApiController extends CoreController
         echo json_encode($payload, JSON_THROW_ON_ERROR);
 
         exit;
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function getUid(): ?string
+    {
+        $session = new SessionService();
+
+        if (isset($_GET['newSession'])) {
+            $session->clear();
+        }
+
+        if (!$uid = $session->get(self::UID_KEY)) {
+            $uid = $_GET['playerID'] ?? Player::create()->getPlayerID();
+            $session->set(self::UID_KEY, $uid);
+        }
+
+        return $uid;
     }
 }

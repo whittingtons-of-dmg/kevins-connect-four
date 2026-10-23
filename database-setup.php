@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/vendor/autoload.php';
 
-use MediumDubb\ConnectFour\Database\PDOConnector;
+use MediumDubb\ConnectFour\PDOConnector;
 
 $db = new PDOConnector();
 

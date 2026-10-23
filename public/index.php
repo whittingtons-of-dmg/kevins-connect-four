@@ -1,9 +1,10 @@
 <?php
 
 use Dotenv\Dotenv;
-use MediumDubb\ConnectFour\Controllers\GameApiController;
-use MediumDubb\ConnectFour\Controllers\PageController;
-use MediumDubb\ConnectFour\Core\AppRouter;
+use MediumDubb\ConnectFour\AppRouter;
+use MediumDubb\ConnectFour\GameApiController;
+use MediumDubb\ConnectFour\GameExceptionHandler;
+use Monolog\Logger;
 
 // Find autoload.php
 if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
@@ -16,18 +17,22 @@ if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
     exit(1);
 }
 
+$exceptionHandler = new GameExceptionHandler(new Logger('APIErrors'));
+
+set_exception_handler([$exceptionHandler, 'handle']);
+
 $dotenv = Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->load();
 
 $router = AppRouter::getRouter();
-
-// Define your routes here
-$router->get('/', [new PageController(), 'index']);
 $router->get('/join-room', [new GameApiController(), 'join']);
 $router->get('/get-board-state', [new GameApiController(), 'getBoardState']);
 $router->get('/drop-token', [new GameApiController(), 'dropToken']);
-
 $router->post('/create-room', [new GameApiController(), 'create']);
 
 // Run the router using the server request data
-$router->dispatch();
+try {
+    $router->dispatch();
+} catch (Throwable $e) {
+    $exceptionHandler->handle($e);
+}

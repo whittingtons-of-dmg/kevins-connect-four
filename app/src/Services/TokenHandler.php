@@ -49,13 +49,13 @@ final readonly class TokenHandler
         $currentPlayerID = $this->board->getCurrentPlayer();
 
         if ($sessionPlayerID !== $requestPlayerID)
-            throw new ApiException('InvalidPlayerMove', 'Do not make moves for other players', 400);
+            throw new ApiException( 'Do not make moves for other players', 400);
 
         if ($currentPlayerID !== $requestPlayerID)
-            throw new ApiException('InvalidPlayerMove', 'It\'s not your turn', 400);
+            throw new ApiException('It\'s not your turn', 400);
 
         if ($this->currentToken->getBoardRow() >= 5) // 0-5 | 6 total
-            throw new ApiException('InvalidTokenPlacement', 'Invalid token placement, column is full', 400);
+            throw new ApiException('Invalid token placement, column is full', 400);
     }
 
     /**

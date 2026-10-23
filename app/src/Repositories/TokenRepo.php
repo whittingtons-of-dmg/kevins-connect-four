@@ -2,9 +2,9 @@
 
 namespace MediumDubb\ConnectFour\Repositories;
 
-use MediumDubb\ConnectFour\Database\PDOConnector;
 use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
 use PDOException;
 
@@ -54,7 +54,7 @@ class TokenRepo
                 ]
             );
         } catch (PDOException $e) {
-            throw new ApiException('TokenPersistenceError', 'Failed to set token', 500);
+            throw new ApiException('Failed to set token', 500);
         }
     }
 

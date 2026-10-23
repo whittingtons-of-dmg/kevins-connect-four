@@ -30,13 +30,13 @@ final readonly class TokenDropRequest
         $column = $_GET[self::COLUMN_PARAM] ?? null;
 
         if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-            throw new ApiException("InvalidRequest", "Invalid request method", 405);
+            throw new ApiException("Invalid request method", 405);
         }
 
         if (
             $playerId === null || $boardId === null || $column === null
         ) {
-            throw new ApiException("InvalidRequest", "Incomplete token request", 400);
+            throw new ApiException("Incomplete token request", 400);
         }
 
         if (
@@ -44,11 +44,11 @@ final readonly class TokenDropRequest
             (!filter_var($boardId, FILTER_VALIDATE_INT) || $boardId === '0' ) ||
             (filter_var($column, FILTER_VALIDATE_INT) < 0 || filter_var($column, FILTER_VALIDATE_INT) > 6)
         ) {
-            throw new ApiException("InvalidRequest", "Invalid token request", 400);
+            throw new ApiException("Invalid token request", 400);
         }
 
         if (intval($column) > 6 || intval($column) < 0) {
-            throw new ApiException("InvalidRequest", "Invalid column", 400);
+            throw new ApiException("Invalid column", 400);
         }
 
         return new self(

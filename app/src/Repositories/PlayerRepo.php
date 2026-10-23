@@ -2,8 +2,8 @@
 
 namespace MediumDubb\ConnectFour\Repositories;
 
-use MediumDubb\ConnectFour\Database\PDOConnector;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
 use PDOException;
 
@@ -33,7 +33,7 @@ class PlayerRepo
 
             return $this->db->pdo->lastInsertId();
         } catch (PDOException $e) {
-            throw new ApiException('PDOPlayerError', 'Failed to create new player', 500);
+            throw new ApiException( 'Failed to create new player', 500);
         }
     }
 
@@ -56,10 +56,10 @@ class PlayerRepo
                 return $playerRow;
             }
             else {
-                throw new ApiException('PlayerNotFound', 'Player not found', 400);
+                throw new ApiException( 'Player not found', 400);
             }
         } catch (PDOException $e) {
-            throw new ApiException('PDOPlayerError','Failed to get player', 500);
+            throw new ApiException('Failed to get player', 500);
         }
 
     }

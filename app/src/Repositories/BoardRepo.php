@@ -3,8 +3,8 @@
 namespace MediumDubb\ConnectFour\Repositories;
 
 use Exception;
-use MediumDubb\ConnectFour\Database\PDOConnector;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
 use PDOException;
 
@@ -40,7 +40,7 @@ class BoardRepo
             );
             return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: lookup failed', 500);
+            throw new ApiException('Internal server error: lookup failed', 500);
         }
     }
 
@@ -52,7 +52,7 @@ class BoardRepo
         if (filter_var($player_id, FILTER_VALIDATE_INT)) {
             $player_id = intval($player_id);
         } else {
-            throw new ApiException('InvalidPlayerID', 'Invalid player ID');
+            throw new ApiException('Invalid player ID', 403);
         }
 
         try {
@@ -65,7 +65,7 @@ class BoardRepo
 
             $boardID = $this->db->pdo->lastInsertId();
         } catch (PDOException|Exception $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: unable to create', 500);
+            throw new ApiException('Internal server error: unable to create');
         }
 
         return $this->getBoardByID($boardID);
@@ -89,11 +89,11 @@ class BoardRepo
             );
 
             if ($stmt->rowCount() === 0) {
-                throw new ApiException('CannotJoinBoard', 'You cannot join this board');
+                throw new ApiException('You cannot join this board', 403);
             }
 
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: unable to join.', 500);
+            throw new ApiException('Internal server error: unable to join.', 403);
         }
 
         return $this->getBoardByID($board_id);
@@ -111,7 +111,7 @@ class BoardRepo
 
             $id = $stmt->fetchColumn();
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: failed on open board lookup', 500);
+            throw new ApiException('Internal server error: failed on open board lookup', 500);
         }
 
         return $id;
@@ -134,7 +134,7 @@ class BoardRepo
                 ]
             );
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: failed persisting winner', 500);
+            throw new ApiException('Internal server error: failed persisting winner', 500);
         }
 
         return $winnerID;
@@ -161,13 +161,13 @@ class BoardRepo
 
             $nextPlayerID = $stmt->fetchColumn();
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: failed on turn assignment', 500);
+            throw new ApiException('Internal server error: failed on turn assignment', 500);
         }
 
         if ($nextPlayerID) {
             return $this->assignCurrentPlayer($boardID, $nextPlayerID);
         } else {
-            throw new ApiException('FailedToAssignNextPlayer', 'Failed to get next player');
+            throw new ApiException('Failed to get next player');
         }
     }
 
@@ -188,7 +188,7 @@ class BoardRepo
                 ]
             );
         } catch (PDOException $e) {
-            throw new ApiException('PDOServerSideError', 'Internal server error: failed turn update', 500);
+            throw new ApiException('Internal server error: failed turn update', 500);
         }
 
         return $playerID;

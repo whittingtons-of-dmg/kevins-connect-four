@@ -1,6 +1,6 @@
 <?php
 
-namespace MediumDubb\ConnectFour\Database;
+namespace MediumDubb\ConnectFour;
 
 use Exception;
 use PDO;
@@ -56,6 +56,6 @@ class PDOConnector
 
     public function test_connection(): string
     {
-        return is_null($this->pdo) ? "Connection terminated" : "Connecion active";
+        return is_null($this->pdo) ? "Connection terminated" : "Connection active";
     }
 }

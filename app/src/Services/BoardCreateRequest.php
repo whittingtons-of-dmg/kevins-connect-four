@@ -16,14 +16,14 @@ final readonly class BoardCreateRequest
     public static function validateRequestMethod(int|string $playerId): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            throw new ApiException("InvalidRequest", "Invalid request method", 405);
+            throw new ApiException("Invalid request method", 405);
         }
         if (
             $playerId === '' ||
             $playerId === '0' ||
             !filter_var($playerId, FILTER_VALIDATE_INT)
         ) {
-            throw new ApiException("InvalidRequest", "Invalid creation request", 400);
+            throw new ApiException("Invalid creation request", 400);
         }
 
         return new self(

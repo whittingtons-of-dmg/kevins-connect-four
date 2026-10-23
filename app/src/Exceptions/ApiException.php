@@ -3,18 +3,17 @@
 namespace MediumDubb\ConnectFour\Exceptions;
 
 use Exception;
+use Throwable;
 
 class ApiException extends Exception
 {
-    protected string $errorType;
-
-    public function __construct(string $errorType, string $message, int $statusCode = 400)
+    public function __construct(string $message, private readonly int $statusCode = 500, ?Throwable $previous = null)
     {
-        parent::__construct($message, $statusCode);
-        $this->errorType = $errorType;
+        parent::__construct($message, 0, $previous);
     }
 
-    public function getErrorType(): string {
-        return $this->errorType;
+    public function getStatusCode(): int
+    {
+        return $this->statusCode;
     }
 }
