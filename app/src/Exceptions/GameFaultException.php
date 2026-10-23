@@ -9,7 +9,7 @@ use Throwable;
 class GameFaultException extends ApiException
 {
     public function __construct(
-        string $message = 'The game has encountered an issue',
+        string $message = 'A game process has encountered an error',
         private readonly array $errors = []
     ) {
         parent::__construct($message);

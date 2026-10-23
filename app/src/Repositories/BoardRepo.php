@@ -4,6 +4,9 @@ namespace MediumDubb\ConnectFour\Repositories;
 
 use Exception;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\Exceptions\GameConflictException;
+use MediumDubb\ConnectFour\Exceptions\GameFaultException;
+use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
 use PDOException;
@@ -13,58 +16,173 @@ class BoardRepo
     private PDOConnector $db;
     private const string TABLE = 'boards';
 
-    private const array DB_COLUMNS = [
-        'id',
-        'player_one_id',
-        'player_two_id',
-        'current_player_id',
-        'winner_id',
-        'finished',
-    ];
-
     public function __construct() {
         $this->db = new PDOConnector();
     }
 
+    private function insertPlayerID(string|int $playerID): false|string
+    {
+        $this->db->run(
+            "INSERT INTO " . self::TABLE . " (player1) VALUES (:player_one_id)",
+            [
+                'player_one_id' => $playerID,
+            ]
+        );
+
+        return $this->db->pdo->lastInsertId(); // returns PK from last edited record, use with caution
+    }
+
+    private function getBoardRowByID(string|int $boardID): array|false
+    {
+        $stmt = $this->db->run(
+            "SELECT * FROM " . self::TABLE . " WHERE id = :boardID LIMIT 1",
+            [
+                ':boardID' => $boardID
+            ]
+        );
+
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    private function setPlayerTwo(string|int $boardID, string|int $playerTwoID): int|false
+    {
+        $stmt = $this->db->run(
+            "UPDATE " . self::TABLE . "
+                    SET (player2, current_player) = (:player_two_id, :current_player_id)
+                    WHERE id = :id
+                    AND player2 IS NULL",
+            [
+                'player_two_id' => $playerTwoID,
+                'current_player_id' => $playerTwoID,
+                'id' => $boardID,
+            ]
+        );
+
+        return $stmt->rowCount();
+    }
+
+    private function getOpenBoard(): int|string|false
+    {
+        $stmt = $this->db->run(
+            "SELECT id FROM " . self::TABLE . " WHERE player2 IS NULL LIMIT 1"
+        );
+
+        return $stmt->fetchColumn();
+    }
+
+    private function setWinner(string|int $winnerID, string|int $boardID): int|string
+    {
+        $this->db->run(
+            "UPDATE " . self::TABLE . "
+                    SET winner = :winner_id
+                    WHERE id = :id
+                    AND winner = NULL",
+            [
+                'winner_id' => $winnerID,
+                'id' => $boardID
+            ]
+        );
+
+        return $winnerID;
+    }
+
+    private function getNextPlayerID(string|int $boardID): int|string|false
+    {
+        $stmt = $this->db->run(
+            "SELECT 
+                CASE 
+                    WHEN current_player = player1 THEN player2
+                    ELSE player1
+                END AS opposing_player_id
+            FROM " . self::TABLE . "
+            WHERE id = :boardID",
+            [
+                'boardID' => $boardID
+            ]
+        );
+
+        return $stmt->fetchColumn();
+    }
+
+    private function setNextPlayerID(string|int $playerID, string|int $boardID): int|string|false
+    {
+        $this->db->run(
+            "UPDATE " . self::TABLE . "
+                    SET current_player_id = :current_player_id
+                    WHERE id = :id
+                    AND board_finished = 0",
+            [
+                'current_player_id' => $playerID,
+                'id' => $boardID
+            ]
+        );
+
+        return $playerID;
+    }
+
+    private function getBoardPlayerIDs(string|int $boardID): array|null
+    {
+        $stmt = $this->db->run(
+            "SELECT 
+                    player1 AS player_one_id,
+                    player2 AS player_two_id
+                    FROM " . self::TABLE . "
+                    WHERE id = :boardID
+                    AND board_finished = 0
+                    LIMIT 1",
+            [
+                'boardID' => $boardID,
+            ]
+        );
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     /**
      * @throws ApiException
      */
-    public function getBoardByID(string $boardID): array
+    public function getBoardByID(string|int $boardID): array
     {
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+
+        if ($filteredBoardID === false)
+            throw new GameValidationException('Board ID is invalid', ['The board ID must be a positive integer']);
+
         try {
-            $stmt = $this->db->run(
-                "SELECT * FROM " . self::TABLE . " WHERE id = :boardID LIMIT 1",
-                [
-                    ':boardID' => $boardID
-                ]
-            );
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $result = $this->getBoardRowByID($boardID);
         } catch (PDOException $e) {
-            throw new ApiException('Internal server error: lookup failed', 500);
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Board lookup failed');
+        }
+
+        if (is_array($result)) {
+            return $result;
+        } else {
+            throw new GameFaultException('Failed to fetch board data');
         }
     }
 
     /**
      * @throws ApiException
      */
-    public function create(string $player_id): array
+    public function create(string|int $playerID): array
     {
-        if (filter_var($player_id, FILTER_VALIDATE_INT)) {
-            $player_id = intval($player_id);
+        $filteredPlayerID = filter_var($playerID, FILTER_VALIDATE_INT);
+
+        if ($filteredPlayerID === false)
+            throw new GameValidationException('Player ID is invalid', ['The player ID must be a positive integer']);
+
+
+        if (filter_var($playerID, FILTER_VALIDATE_INT)) {
+            $playerID = intval($playerID);
         } else {
-            throw new ApiException('Invalid player ID', 403);
+            throw new GameValidationException('Player ID is invalid', ['The ID: "' . $playerID . '" is invalid.']);
         }
 
         try {
-            $this->db->run(
-                "INSERT INTO " . self::TABLE . " (player1) VALUES (:player_one_id)",
-                [
-                    'player_one_id' => $player_id,
-                ]
-            );
-
-            $boardID = $this->db->pdo->lastInsertId();
+           $boardID = $this->insertPlayerID($playerID);
         } catch (PDOException|Exception $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Internal server error: unable to create');
         }
 
@@ -74,101 +192,93 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function join(string $board_id, string $player_two_id): array
+    public function join(string|int $boardID, string|int $playerTwoID): array
     {
-        try {
-            $stmt = $this->db->run(
-                "UPDATE " . self::TABLE . "
-                    SET (player2, current_player) = (:player_two_id, :current_player_id)
-                    WHERE id = :id
-                    AND player2 IS NULL",
-                [
-                    'player_two_id' => $player_two_id,
-                    'current_player_id' => $player_two_id
-                ]
-            );
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
 
-            if ($stmt->rowCount() === 0) {
-                throw new ApiException('You cannot join this board', 403);
+        if ($filteredBoardID === false)
+            throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
+
+        $filteredPlayerTwoID = filter_var($playerTwoID, FILTER_VALIDATE_INT);
+
+        if ($filteredPlayerTwoID === false)
+            throw new GameValidationException('Player ID is invalid', ['The player ID must be a positive integer']);
+
+        try {
+            $count = $this->setPlayerTwo($filteredBoardID, $filteredPlayerTwoID);
+
+            if ($count === 0) {
+                throw new GameConflictException('You cannot join this board');
             }
-
         } catch (PDOException $e) {
-            throw new ApiException('Internal server error: unable to join.', 403);
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: unable to join.');
         }
 
-        return $this->getBoardByID($board_id);
+        return $this->getBoardByID($filteredBoardID);
     }
 
     /**
      * @throws ApiException
      */
-    public function getOpenBoardID(): ?string
+    public function getOpenBoardID(): string|int|null
     {
         try {
-            $stmt = $this->db->run(
-                "SELECT id FROM " . self::TABLE . " WHERE player2 IS NULL LIMIT 1"
-            );
-
-            $id = $stmt->fetchColumn();
+            $boardID = $this->getOpenBoard();
+            if ($boardID)
+                return $boardID;
+            else
+                throw new GameValidationException('No open boards');
         } catch (PDOException $e) {
-            throw new ApiException('Internal server error: failed on open board lookup', 500);
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed on open board lookup',);
         }
-
-        return $id;
     }
 
     /**
      * @throws ApiException
      */
-    public function setBoardWinner(string $winnerID, string $boardID): string|int
+    public function setBoardWinner(string|int $winnerID, string|int $boardID): string|int
     {
-        try {
-            $this->db->run(
-                "UPDATE " . self::TABLE . "
-                    SET winner = :winner_id
-                    WHERE id = :id
-                    AND winner = NULL",
-                [
-                    'winner_id' => $winnerID,
-                    'id' => $boardID
-                ]
-            );
-        } catch (PDOException $e) {
-            throw new ApiException('Internal server error: failed persisting winner', 500);
-        }
+        $filteredWinnerID = filter_var($winnerID, FILTER_VALIDATE_INT);
 
-        return $winnerID;
+        if ($filteredWinnerID === false)
+            throw new GameValidationException('winner ID is invalid', ['The winner ID must be a positive integer']);
+
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+
+        if ($filteredBoardID === false)
+            throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
+
+        try {
+            return $this->setWinner($filteredWinnerID, $filteredBoardID);
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed persisting winner');
+        }
     }
 
     /**
      * @throws ApiException
      */
-    public function updateTurn(string $boardID): string|int
+    public function updateTurn(string|int $boardID): string|int
     {
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+
+        if ($filteredBoardID === false)
+            throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
+
         try {
-            $stmt = $this->db->run(
-                "SELECT 
-                    CASE 
-                        WHEN current_player = player1 THEN player2
-                        ELSE player1
-                    END AS opposing_player_id
-                FROM " . self::TABLE . "
-                WHERE id = :boardID",
-                [
-                    'boardID' => $boardID
-                ]
-            );
+            $nextPlayerID = $this->getNextPlayerID($boardID);
 
-            $nextPlayerID = $stmt->fetchColumn();
+            if (!$nextPlayerID)
+                throw new GameConflictException('Failed to get next player');
         } catch (PDOException $e) {
-            throw new ApiException('Internal server error: failed on turn assignment', 500);
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed on turn assignment');
         }
 
-        if ($nextPlayerID) {
-            return $this->assignCurrentPlayer($boardID, $nextPlayerID);
-        } else {
-            throw new ApiException('Failed to get next player');
-        }
+        return $this->assignCurrentPlayer($boardID, $nextPlayerID);
     }
 
     /**
@@ -177,38 +287,28 @@ class BoardRepo
     private function assignCurrentPlayer(string $boardID, string $playerID): string|int
     {
         try {
-            $this->db->run(
-                "UPDATE " . self::TABLE . "
-                    SET current_player_id = :current_player_id
-                    WHERE id = :id
-                    AND board_finished = 0",
-                [
-                    'current_player_id' => $playerID,
-                    'id' => $boardID
-                ]
-            );
+            return $this->setNextPlayerID($boardID, $playerID);
         } catch (PDOException $e) {
-            throw new ApiException('Internal server error: failed turn update', 500);
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed turn update');
         }
-
-        return $playerID;
     }
 
-    public function getRoomPlayerIDs(string $roomID): ?array
+    /**
+     * @throws ApiException
+     */
+    public function getRoomPlayerIDs(string $boardID): ?array
     {
-        $stmt = $this->db->run(
-            "SELECT 
-                    player1 AS player_one_id,
-                    player2 AS player_two_id
-                    FROM " . self::TABLE . "
-                    WHERE id = :roomID
-                    AND board_finished = 0
-                    LIMIT 1",
-            [
-                'roomID' => $roomID,
-            ]
-        );
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
 
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($filteredBoardID === false)
+            throw new GameValidationException('room ID is invalid', ['The board ID must be a positive integer']);
+
+        try {
+            return $this->getBoardPlayerIDs($filteredBoardID);
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed get board players');
+        }
     }
 }
