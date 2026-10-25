@@ -3,6 +3,7 @@
 namespace MediumDubb\ConnectFour\Repositories;
 
 use Exception;
+use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameConflictException;
 use MediumDubb\ConnectFour\Exceptions\GameFaultException;
@@ -18,6 +19,15 @@ class BoardRepo
 
     public function __construct() {
         $this->db = new PDOConnector();
+    }
+
+    private function boardIDExists(string|int $boardID):bool
+    {
+        $stmt = $this->db->run("SELECT 1 FROM your_table WHERE id = :id LIMIT 1", [
+            'id' => $boardID
+        ]);
+
+       return (bool) $stmt->fetchColumn();
     }
 
     private function insertPlayerID(string|int $playerID): false|string
@@ -138,6 +148,25 @@ class BoardRepo
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    private function getBoardTokens(string|int $boardID): array|false
+    {
+        $stmt = $this->db->run(
+            "SELECT 
+                    board,
+                    player,
+                    board_column,
+                    board_row
+                    FROM " . self::TABLE ."
+                    WHERE board = :boardID
+                    ORDER BY board_column ASC, board_row ASC",
+            [
+                'boardID' => $boardID,
+            ]
+        );
+
+        return  $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /**
      * @throws ApiException
      */
@@ -238,6 +267,24 @@ class BoardRepo
     /**
      * @throws ApiException
      */
+    public function boardExists(string|int $boardID): bool
+    {
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+
+        if ($filteredBoardID === false)
+            throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
+
+        try {
+            return $this->boardIDExists($filteredBoardID);
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed on open board lookup',);
+        }
+    }
+
+    /**
+     * @throws ApiException
+     */
     public function setBoardWinner(string|int $winnerID, string|int $boardID): string|int
     {
         $filteredWinnerID = filter_var($winnerID, FILTER_VALIDATE_INT);
@@ -309,6 +356,28 @@ class BoardRepo
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Internal server error: failed get board players');
+        }
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function getTokensByBoardID(string|int $boardID): array
+    {
+        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+
+        if ($filteredBoardID === false)
+            throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
+
+        try {
+            $tokens = $this->getBoardTokens($filteredBoardID);
+            if (!empty($tokens)) {
+                return array_map(fn($row) => Token::fromDB($row), $tokens);
+            } else {
+                return [];
+            }
+        } catch (PDOException $e) {
+            throw new ApiException('Failed to get tokens');
         }
     }
 }

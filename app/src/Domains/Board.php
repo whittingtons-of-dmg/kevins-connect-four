@@ -81,7 +81,7 @@ final class Board
      * @throws ApiException
      */
     public function getTokens(): array {
-        return new TokenRepo()->getTokensByBoardID($this->id);
+        return new BoardRepo()->getTokensByBoardID($this->getBoardID());
     }
 
     /**
@@ -138,12 +138,7 @@ final class Board
      */
     public function setToken(TokenDropRequest $tokenDropRequest): void
     {
-        new TokenRepo()->setToken(
-            $tokenDropRequest->getBoardID(),
-            $tokenDropRequest->getPlayerID(),
-            $tokenDropRequest->getCurrentToken()->getBoardColumn(),
-            $tokenDropRequest->getCurrentToken()->getBoardRow()
-        );
+        new TokenRepo($tokenDropRequest->getCurrentToken())->setToken();
     }
 
     /**
