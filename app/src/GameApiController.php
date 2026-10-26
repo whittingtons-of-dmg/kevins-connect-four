@@ -3,13 +3,11 @@
 namespace MediumDubb\ConnectFour;
 
 use JetBrains\PhpStorm\NoReturn;
-use MediumDubb\ConnectFour\Domains\Board;
+use JsonException;
 use MediumDubb\ConnectFour\Domains\Player;
-use MediumDubb\ConnectFour\DTO\BoardResponse;
+use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
-use MediumDubb\ConnectFour\Services\BoardCreateRequest;
-use MediumDubb\ConnectFour\Services\BoardJoinRequest;
-use MediumDubb\ConnectFour\Services\BoardStateRequest;
+use MediumDubb\ConnectFour\Services\BoardRequestHandler;
 use MediumDubb\ConnectFour\Services\SessionService;
 use MediumDubb\ConnectFour\Services\TokenHandler;
 
@@ -28,6 +26,9 @@ class GameApiController
 
     private const string UID_KEY = 'UID';
 
+    /**
+     * @throws JsonException
+     */
     public function dropToken(): void
     {
         $this->handleRequest(function():array {
@@ -35,34 +36,42 @@ class GameApiController
         });
     }
 
-    // used for all responses
+    /**
+     * @throws JsonException
+     */
     public function getBoardState(): void
     {
         $this->handleRequest(function():array {
-            $stateRequest = BoardStateRequest::fromQueryParams();
-            $board = Board::getByID($stateRequest->getBoardID());
-            return BoardResponse::fromDomain($board)->toArray();
+            $board = BoardRequestHandler::fromGetterRequest();
+            return BoardDTO::fromDomain($board)->toArray();
         });
     }
 
+    /**
+     * @throws JsonException
+     */
     public function create(): void
     {
         $this->handleRequest(function():array {
-            $createRequest = BoardCreateRequest::validateRequestMethod($this->getUid());
-            $board = Board::create($createRequest->getPlayerID());
-            return BoardResponse::fromDomain($board)->toArray();
+            $board = BoardRequestHandler::boardFromCreateRequest($this->getUid());
+            return BoardDTO::fromDomain($board)->toArray();
         });
     }
 
+    /**
+     * @throws JsonException
+     */
     public function join(): void
     {
         $this->handleRequest(function(): array {
-            $joinRequest = BoardJoinRequest::fromQueryParams();
-            $board = Board::getByJoin($joinRequest->getBoardID(), $this->getUid());
-            return  BoardResponse::fromDomain($board)->toArray();
+            $board = BoardRequestHandler::boardFromJoinRequest($this->getUid());
+            return BoardDTO::fromDomain($board)->toArray();
         });
     }
 
+    /**
+     * @throws JsonException
+     */
     private function handleRequest(callable $action): void
     {
         try {
@@ -80,6 +89,9 @@ class GameApiController
         $this->sendJsonResponse($payload, $statusCode);
     }
 
+    /**
+     * @throws JsonException
+     */
     #[NoReturn]
     private function sendJsonResponse(
         array $payload,

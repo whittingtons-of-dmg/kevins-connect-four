@@ -10,62 +10,14 @@ use MediumDubb\ConnectFour\Services\TokenDropRequest;
 final class Board
 {
     public function __construct(
-        private readonly int    $id,
-        private int|Player      $player1,
-        private null|int|Player $player2 = null,
-        private ?int            $current_player = null,
-        private ?int            $winner = null,
-        public readonly int     $cols = 7,
-        public readonly int     $rows = 6,
-    ){
-        if ($this->player1 instanceof Player === false ) { $this->player1 = new Player($this->player1); }
-        if ($this->player2 instanceof Player === false && $this->player2 !== null) { $this->player2 = new Player($this->player1); }
-    }
-
-    /**
-     * @throws ApiException
-     */
-    public static function create(int $playerID): self {
-        $row = new BoardRepo()->create($playerID);
-
-        return new self(
-            id: $row['id'],
-            player1: $row['player1'],
-            player2: $row['player2'],
-            current_player: $row['current_player'],
-            winner: $row['winner'],
-        );
-    }
-
-    /**
-     * @throws ApiException
-     */
-    public static function getByID(int $boardID): self {
-        $row = new BoardRepo()->getBoardByID($boardID);
-
-        return new self(
-            id: $row['id'],
-            player1: $row['player1'],
-            player2: $row['player2'],
-            current_player: $row['current_player'],
-            winner: $row['winner'],
-        );
-    }
-
-    /**
-     * @throws ApiException
-     */
-    public static function getByJoin(int $boardID, int $playerID): self {
-        $row = new BoardRepo()->join($boardID, $playerID);
-
-        return new self(
-            id: $row['id'],
-            player1: $row['player1'],
-            player2: $row['player2'],
-            current_player: $row['current_player'],
-            winner: $row['winner'],
-        );
-    }
+        private readonly int     $id,
+        private readonly Player  $player1,
+        private readonly ?Player $player2 = null,
+        private ?int             $current_player = null,
+        private ?int             $winner = null,
+        public readonly int      $cols = 7,
+        public readonly int      $rows = 6,
+    ){}
 
     public static function fromDB(array $row): self {
         return new self(
@@ -84,18 +36,12 @@ final class Board
         return new BoardRepo()->getTokensByBoardID($this->getBoardID());
     }
 
-    /**
-     * @throws ApiException
-     */
-    public function getPlayer1(): ?Player {
-        return $this->player1 ? Player::getByID($this->player1) : null;
+    public function getPlayer1(): Player {
+        return $this->player1;
     }
 
-    /**
-     * @throws ApiException
-     */
     public function getPlayer2(): ?Player {
-        return $this->player2 ? Player::getByID($this->player2) : null;
+        return $this->player2;
     }
 
     public function getCurrentPlayer(): ?int {
@@ -116,6 +62,7 @@ final class Board
      */
     public function updateTurn(int $boardID): void
     {
+        // todo - move logic into the respected request handler service classes
         $nextPlayer = new BoardRepo()->updateTurn($boardID);
         if ($nextPlayer) {
             $this->current_player = $nextPlayer;
@@ -127,6 +74,7 @@ final class Board
      */
     public function setWinner(int $playerID): void
     {
+        // todo - move logic into the respected request handler service classes
         $winnerID = new BoardRepo()->setBoardWinner($playerID, $this->id);
         if ($winnerID) {
             $this->winner = $winnerID;
@@ -138,6 +86,7 @@ final class Board
      */
     public function setToken(TokenDropRequest $tokenDropRequest): void
     {
+        // todo - move logic into the respected request handler service classes
         new TokenRepo($tokenDropRequest->getCurrentToken())->setToken();
     }
 
@@ -146,7 +95,6 @@ final class Board
      */
     public function getBoardAsArray(): array
     {
-        // build board['rows']['cols']
         $boardRows = [];
         $tokens = $this->getTokens();
 
