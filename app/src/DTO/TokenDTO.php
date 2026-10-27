@@ -5,7 +5,7 @@ namespace MediumDubb\ConnectFour\DTO;
 use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 
-class TokenResponse
+class TokenDTO
 {
     public function __construct(
         public int $board,

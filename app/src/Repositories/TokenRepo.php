@@ -10,25 +10,18 @@ use PDOException;
 
 class TokenRepo
 {
-    private PDOConnector $db;
     private const string TABLE = 'tokens';
 
-    /**
-     * @throws GameValidationException
-     * @throws ApiException
-     */
-    public function __construct(private readonly Token $token)
-    {
-        $this->db = new PDOConnector();
-    }
+    public function __construct(private readonly PDOConnector $db){}
 
     /**
      * @throws ApiException
      */
-    private function enterToken(): void
+    public function setToken(Token $token): void
     {
-        $this->db->run(
-            "INSERT INTO tokens 
+        try {
+            $this->db->run(
+                "INSERT INTO tokens 
                     (
                         board,
                         player,
@@ -42,39 +35,13 @@ class TokenRepo
                          :board_column,
                          :board_row
                      )",
-            [
-                'board_id' => $this->token->getBoardID(),
-                'player_id' => $this->token->getPlayerID(),
-                'board_column' => $this->token->getBoardColumn(),
-                'board_row' => $this->token->getBoardRow()
-            ]
-        );
-    }
-
-    private function countColumnRows(): int|false
-    {
-        $stmt = $this->db->run(
-            "SELECT COUNT(*) 
-                        AS column_tokens 
-                        FROM ". self::TABLE ." 
-                        WHERE board = :boardID
-                        AND board_column = :boardColumn;",
-            [
-                'boardID' => $this->token->getBoardID(),
-                'boardColumn' => $this->token->getBoardColumn(),
-            ]
-        );
-
-        return $stmt->fetchColumn();
-    }
-
-    /**
-     * @throws ApiException
-     */
-    public function setToken(): void
-    {
-        try {
-            $this->enterToken();
+                [
+                    'board_id' => $token->getBoardID(),
+                    'player_id' => $token->getPlayerID(),
+                    'board_column' => $token->getBoardColumn(),
+                    'board_row' => $token->getBoardRow()
+                ]
+            );
         } catch (PDOException $e) {
             throw new ApiException('Failed to set token',);
         }
@@ -82,16 +49,25 @@ class TokenRepo
 
     /**
      * @throws ApiException
+     * @throws GameValidationException
      */
-    public function getColRowCount(): int
+    public function getColRowCount(int $boardId, int $column): int
     {
         try {
-            if ( ($count = $this->countColumnRows()) || $count === 0)
-                return $count;
-            else if ($count > 6)
-                throw new GameValidationException('This column is full');
-            else
-                throw new GameValidationException('Couln count failed');
+            $stmt = $this->db->run(
+                "SELECT COUNT(*) 
+                        AS column_tokens 
+                        FROM ". self::TABLE ." 
+                        WHERE board = :boardID
+                        AND board_column = :boardColumn;",
+                [
+                    'boardID' => $boardId,
+                    'boardColumn' => $column,
+                ]
+            );
+
+            return $stmt->fetchColumn();
+
         } catch (PDOException $e) {
             throw new ApiException('Failed to get column token count');
         }
