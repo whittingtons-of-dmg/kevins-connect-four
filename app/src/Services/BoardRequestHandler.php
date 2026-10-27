@@ -63,7 +63,7 @@ class BoardRequestHandler
      * @throws GameValidationException
      * @throws ApiException
      */
-    public static function fromGetterRequest(): Board
+    public static function boardFromGetterRequest(): Board
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
             throw new GameValidationException( "Invalid request method", ["The request method must be GET"] );

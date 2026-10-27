@@ -50,7 +50,7 @@ class GameApiController
     public function getBoardState(): void
     {
         $this->handleRequest(function():array {
-            $board = BoardRequestHandler::fromGetterRequest();
+            $board = BoardRequestHandler::boardFromGetterRequest();
             return BoardDTO::fromDomain($board)->toArray();
         });
     }
