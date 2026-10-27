@@ -4,7 +4,7 @@ namespace MediumDubb\ConnectFour\DTO;
 
 use MediumDubb\ConnectFour\Domains\Player;
 
-class PlayerResponse
+class PlayerDTO
 {
     public function __construct(
         public int $id
