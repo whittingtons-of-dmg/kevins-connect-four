@@ -9,7 +9,7 @@ use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Services\BoardRequestHandler;
 use MediumDubb\ConnectFour\Services\SessionService;
-use MediumDubb\ConnectFour\Services\TokenHandler;
+use MediumDubb\ConnectFour\Services\DropRequestHandler;
 
 class GameApiController
 {
@@ -32,7 +32,15 @@ class GameApiController
     public function dropToken(): void
     {
         $this->handleRequest(function():array {
-            return new TokenHandler($this->getUid())->getResponseObj();
+            $handler = DropRequestHandler::fromTokenDropRequest($this->getUid());
+            $handler->setToken();
+            $handler->setWinnerIfExists();
+
+            if (!$handler->matchEnded())
+                $handler->updateTurn();
+
+            $board = $handler->getTheBoard();
+            return BoardDTO::fromDomain($board)->toArray();
         });
     }
 
