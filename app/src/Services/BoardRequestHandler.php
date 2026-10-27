@@ -22,7 +22,7 @@ class BoardRequestHandler
         $boardID = $_GET[self::BOARD_PARAM] ?? null;
 
         if (is_null($boardID))
-            throw new GameValidationException("Invalid board request", ["Missing parameter 'boardId' from request"]);
+            throw new GameValidationException("Invalid board request", ["Missing parameter `" . self::BOARD_PARAM . "` from request"]);
 
         $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
 
@@ -34,7 +34,7 @@ class BoardRequestHandler
             return Board::fromDB($updatedRow);
         }
         else
-            throw new GameValidationException( "Invalid board request", ["Board ID must be integer greater than 0"]);
+            throw new GameValidationException( "Invalid board request", ["Parameter `" . self::BOARD_PARAM . "` must be integer greater than 0"]);
     }
 
     /**
