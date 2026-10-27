@@ -13,7 +13,7 @@ final class Board
     public function __construct(
         private readonly int     $id,
         private readonly Player  $player1,
-        private readonly ?Player $player2 = null,
+        private ?Player          $player2 = null,
         private ?int             $current_player = null,
         private ?int             $winner = null,
         private array            $tokens = [],
@@ -73,6 +73,11 @@ final class Board
     public function setToken(Token $token): void
     {
         $this->tokens[] = $token;
+    }
+
+    public function setPlayer2(Player $p2): void
+    {
+        $this->player2 = $p2;
     }
 
     public function validateCurrentPlayer(int $playerIdFromRequest, int $sessionPlayerId): bool
