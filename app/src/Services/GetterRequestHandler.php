@@ -6,13 +6,19 @@ use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\Exceptions\NotFoundException;
+use MediumDubb\ConnectFour\PDOConnector;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
 readonly class GetterRequestHandler
 {
     private const string API_BOARD_ID_PARAM = 'boardId';
 
-    public function __construct(private int $boardId){}
+    private PDOConnector $db;
+
+    public function __construct(private int $boardId)
+    {
+        $this->db = new PDOConnector();
+    }
 
     /**
      * @throws GameValidationException
@@ -44,7 +50,7 @@ readonly class GetterRequestHandler
      */
     public function getTheBoard(): Board
     {
-        $boardRow = new BoardRepo()->getBoardByID($this->boardId);
+        $boardRow = new BoardRepo($this->db)->getBoardByID($this->boardId);
 
         if (!is_array($boardRow))
             throw new NotFoundException( "The requested board was not found");

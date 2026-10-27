@@ -2,9 +2,9 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
-use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Domains\Token;
+use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\Exceptions\NotFoundException;
@@ -20,7 +20,7 @@ class DropRequestHandler
 
     private PDOConnector $db;
 
-    public function __construct(private readonly Token $token, private readonly Board $board)
+    public function __construct(private readonly int $boardId, private readonly int $playerId, private readonly int $column)
     {
         $this->db = new PDOConnector();
     }
@@ -29,7 +29,7 @@ class DropRequestHandler
      * @throws ApiException
      * @throws GameValidationException
      */
-    public static function validateRequest(int $sessionPlayerId): self
+    public static function validateRequest(): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET')
             throw new GameValidationException("Invalid request method", ["This endpoint requires a GET request method"]);
@@ -67,88 +67,111 @@ class DropRequestHandler
         )
             throw new GameValidationException("Invalid token request", ['`' . self::COLUMN_PARAM . '` parameter is required with seven possible columns values (int)[0-6].']);
 
-        $boardRow = new BoardRepo()->getBoardByID($filteredBoardID);
+        return new self($boardId, $playerId, $column);
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function updateAndGetBoard(Board $board, Token $token): Board
+    {
+        $this->setToken($board, $token);
+        $this->setWinnerIfExists($board);
+
+        if (!$this->matchEnded($board))
+            $this->updateTurn($board);
+
+        return $board;
+    }
+
+    /**
+     * @throws ApiException
+     * @throws NotFoundException
+     */
+    public function getTheBoard(): Board
+    {
+        $boardRow = new BoardRepo($this->db)->getBoardByID($this->boardId);
 
         if (!$boardRow)
             throw new NotFoundException("Invalid token request", ['The requested board doesn\'t exist']);
 
-        $board = Board::fromDB($boardRow);
+        return Board::fromDB($boardRow);
+    }
 
-        if ($board->validateCurrentPlayer($filteredPlayerID, $sessionPlayerId))
-            throw new ValidationException("Invalid token request", ['You are not permitted to take a turn at this time']);
-
-        $columnRow = new TokenRepo(new PDOConnector())->getColRowCount($boardId, $column);
+    /**
+     * @throws GameValidationException
+     * @throws ApiException
+     */
+    public function getColumnRow(): int
+    {
+        $columnRow = new TokenRepo(new PDOConnector())->getColRowCount($this->boardId, $this->column);
 
         if ($columnRow > 6)
             throw new GameValidationException('The selected board column is full', ['This column has more than six tokens']);
 
-        $token = new Token($boardId, $playerId, $column, $columnRow);
-
-        return new self($token, $board);
+        return $columnRow;
     }
 
-    public function getTheBoard(): Board
+    /**
+     * @throws GameValidationException
+     * @throws ApiException
+     */
+    public function getTheToken(int $row): Token
     {
-        return $this->board;
+        return new Token($this->boardId, $this->playerId, $this->column, $row);
     }
 
-    public function getTheToken(): Token
+    private function matchEnded(Board $board): bool
     {
-        return $this->token;
-    }
-
-    public function matchEnded(): bool
-    {
-        return $this->board->getWinner() || $this->boardFull();
+        return $board->getWinner() || $this->boardFull($board);
     }
 
     /**
      * @throws ApiException
      */
-    public function setToken(): void
+    private function setToken(Board $board, Token $token): void
     {
-        new TokenRepo($this->db)->setToken($this->token);
-        $this->board->setToken($this->token);
+        new TokenRepo($this->db)->setToken($token);
+        $board->setToken($token);
     }
 
     /**
      * @throws ApiException
      */
-    public function updateTurn(): void
+    private function updateTurn(Board $board): void
     {
-        $nextPlayer = new BoardRepo()->updateTurn($this->board->getBoardID());
-        if ($nextPlayer) {
-            $this->board->setCurrentPlayer($nextPlayer);
+        $nextPlayer = new BoardRepo($this->db)->updateTurn($board->getBoardID());
+        if ($nextPlayer)
+            $board->setCurrentPlayer($nextPlayer);
+    }
+
+    /**
+     * @throws ApiException
+     */
+    private function setWinnerIfExists(Board $board): void
+    {
+        if ($winnerId = $this->getWinner($board, $board->popToken())) {
+            new BoardRepo($this->db)->setBoardWinner($winnerId, $board->getBoardID());
+            $board->setWinner($winnerId);
         }
     }
 
-    /**
-     * @throws ApiException
-     */
-    public function setWinnerIfExists(): void
+    private function boardFull(Board $board): bool
     {
-        if ($winnerId = $this->getWinner()) {
-            new BoardRepo()->setBoardWinner($winnerId, $this->board->getBoardID());
-            $this->board->setWinner($winnerId);
-        }
-    }
-
-    private function boardFull(): bool
-    {
-        return count($this->board->getTokens()) >= 42;
+        return count($board->getTokens()) >= 42;
     }
 
     /**
      * @throws ApiException
      */
-    private function getWinner(): bool|int
+    private function getWinner(Board $board, Token $token): bool|int
     {
-        $currentRow = $this->token->getBoardRow();
-        $currentColumn = $this->token->getBoardColumn();
+        $currentRow = $token->getBoardRow();
+        $currentColumn = $token->getBoardColumn();
         $skipL2R = $this->skipCheck([$currentRow, $currentColumn]);
         $skipR2L = $this->skipCheck([$currentRow, $currentColumn], false);
-        $playerID = $this->token->getPlayerID();
-        $boardRows = $this->board->getBoardAsArray();
+        $playerID = $token->getPlayerID();
+        $boardRows = $board->getBoardAsArray();
         $connectCounter = 0;
         $winner = false;
 
@@ -163,7 +186,7 @@ class DropRequestHandler
 
         // horizontal - on same row as current token, start at beginning and count concurrent player ID's and see if four match in a row
         if (!$winner) {
-            for ($i = 0; $i < $this->board->cols; $i++) {
+            for ($i = 0; $i < $board->cols; $i++) {
                 $connectCounter = ($boardRows[$currentRow][$i] === $playerID) ? $connectCounter + 1 : 0;
                 if ($winner = ($connectCounter === 4)) { break; }
             }

@@ -5,11 +5,17 @@ namespace MediumDubb\ConnectFour\Services;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
+use MediumDubb\ConnectFour\PDOConnector;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
 readonly class CreateRequestHandler
 {
-    public function __construct(private int $playerId){}
+    private PDOConnector $db;
+
+    public function __construct(private int $playerId)
+    {
+        $this->db = new PDOConnector();
+    }
 
     /**
      * @throws GameValidationException
@@ -38,7 +44,7 @@ readonly class CreateRequestHandler
      */
     public function createAndGetBoard(): Board
     {
-        $newBoard = new BoardRepo()->create($this->playerId);
+        $newBoard = new BoardRepo($this->db)->create($this->playerId);
         return Board::fromDB($newBoard);
     }
 }

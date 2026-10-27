@@ -60,6 +60,11 @@ final class Board
         return $this->id;
     }
 
+    public function popToken(): Token
+    {
+        return array_pop($this->tokens);
+    }
+
     public function setCurrentPlayer(int $playerId): void
     {
         $this->current_player = $playerId;

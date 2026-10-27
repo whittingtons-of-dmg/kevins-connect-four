@@ -5,13 +5,19 @@ namespace MediumDubb\ConnectFour\Services;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
+use MediumDubb\ConnectFour\PDOConnector;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
 class JoinRequestHandler
 {
     private const string API_BOARD_ID_PARAM = 'boardId';
 
-    public function __construct(private readonly int $boardId, private readonly int $playerId){}
+    private PDOConnector $db;
+
+    public function __construct(private readonly int $boardId, private readonly int $playerId)
+    {
+        $this->db = new PDOConnector();
+    }
 
     /**
      * @throws GameValidationException
@@ -52,7 +58,7 @@ class JoinRequestHandler
      */
     public function joinAndGetBoard(): Board
     {
-        $updatedRow = new BoardRepo()->join($this->boardId, $this->playerId);
+        $updatedRow = new BoardRepo($this->db)->join($this->boardId, $this->playerId);
         return Board::fromDB($updatedRow);
     }
 }

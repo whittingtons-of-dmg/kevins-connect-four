@@ -34,14 +34,11 @@ class GameApiController
     public function dropToken(): void
     {
         $this->handleRequest(function():array {
-            $handler = DropRequestHandler::validateRequest($this->getUid());
-            $handler->setToken();
-            $handler->setWinnerIfExists();
-
-            if (!$handler->matchEnded())
-                $handler->updateTurn();
-
+            $handler = DropRequestHandler::validateRequest();
             $board = $handler->getTheBoard();
+            $colRow = $handler->getColumnRow();
+            $token = $handler->getTheToken($colRow);
+            $board = $handler->updateAndGetBoard($board, $token);
             return BoardDTO::fromDomain($board)->toArray();
         });
     }

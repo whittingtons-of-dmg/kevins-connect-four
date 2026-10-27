@@ -11,12 +11,9 @@ use PDOException;
 
 class PlayerRepo
 {
-    private PDOConnector $db;
     private const string TABLE_NAME = 'players';
 
-    public function __construct() {
-        $this->db = new PDOConnector();
-    }
+    public function __construct(private readonly PDOConnector $db) {}
 
     private function makeNewPlayer(): false|string
     {

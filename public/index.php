@@ -4,6 +4,7 @@ use Dotenv\Dotenv;
 use MediumDubb\ConnectFour\AppRouter;
 use MediumDubb\ConnectFour\GameApiController;
 use MediumDubb\ConnectFour\GameExceptionHandler;
+use MediumDubb\ConnectFour\PDOConnector;
 use Monolog\Logger;
 
 // Find autoload.php

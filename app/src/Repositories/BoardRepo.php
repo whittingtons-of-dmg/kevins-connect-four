@@ -13,12 +13,9 @@ use PDOException;
 
 class BoardRepo
 {
-    private PDOConnector $db;
     private const string TABLE = 'boards';
 
-    public function __construct() {
-        $this->db = new PDOConnector();
-    }
+    public function __construct(private readonly PDOConnector $db) {}
 
     private function boardIDExists(string|int $boardID):bool
     {
