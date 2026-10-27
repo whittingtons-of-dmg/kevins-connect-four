@@ -4,36 +4,39 @@ namespace MediumDubb\ConnectFour\Domains;
 
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
-use MediumDubb\ConnectFour\Repositories\TokenRepo;
-use MediumDubb\ConnectFour\Services\TokenDropRequest;
 
 final class Board
 {
+    public int $cols = 7;
+    public int $rows = 6;
+
     public function __construct(
         private readonly int     $id,
         private readonly Player  $player1,
         private readonly ?Player $player2 = null,
         private ?int             $current_player = null,
         private ?int             $winner = null,
-        public readonly int      $cols = 7,
-        public readonly int      $rows = 6,
+        private array            $tokens = [],
     ){}
 
+    /**
+     * @throws ApiException
+     */
     public static function fromDB(array $row): self {
+        $tokens = new BoardRepo()->getTokensByBoardID($row['id']);
+
         return new self(
             id: $row['id'],
             player1: $row['player1'],
             player2: $row['player2'],
             current_player: $row['current_player'],
             winner: $row['winner'],
+            tokens: $tokens,
         );
     }
 
-    /**
-     * @throws ApiException
-     */
     public function getTokens(): array {
-        return new BoardRepo()->getTokensByBoardID($this->getBoardID());
+        return $this->tokens;
     }
 
     public function getPlayer1(): Player {
@@ -57,37 +60,25 @@ final class Board
         return $this->id;
     }
 
-    /**
-     * @throws ApiException
-     */
-    public function updateTurn(int $boardID): void
+    public function setCurrentPlayer(int $playerId): void
     {
-        // todo - move logic into the respected request handler service classes
-        $nextPlayer = new BoardRepo()->updateTurn($boardID);
-        if ($nextPlayer) {
-            $this->current_player = $nextPlayer;
-        }
+        $this->current_player = $playerId;
     }
 
-    /**
-     * @throws ApiException
-     */
-    public function setWinner(int $playerID): void
+    public function setWinner(int $winnerId): void
     {
-        // todo - move logic into the respected request handler service classes
-        $winnerID = new BoardRepo()->setBoardWinner($playerID, $this->id);
-        if ($winnerID) {
-            $this->winner = $winnerID;
-        }
+        $this->winner = $winnerId;
     }
 
-    /**
-     * @throws ApiException
-     */
-    public function setToken(TokenDropRequest $tokenDropRequest): void
+    public function setToken(Token $token): void
     {
-        // todo - move logic into the respected request handler service classes
-        new TokenRepo($tokenDropRequest->getCurrentToken())->setToken();
+        $this->tokens[] = $token;
+    }
+
+    public function validateCurrentPlayer(int $playerIdFromRequest, int $sessionPlayerId): bool
+    {
+        $boardCurrentPlayer = $this->getCurrentPlayer();
+        return ( $boardCurrentPlayer === $playerIdFromRequest ) && ($playerIdFromRequest === $sessionPlayerId);
     }
 
     /**

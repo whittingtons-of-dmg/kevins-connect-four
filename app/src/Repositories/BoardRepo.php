@@ -6,7 +6,6 @@ use Exception;
 use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameConflictException;
-use MediumDubb\ConnectFour\Exceptions\GameFaultException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
@@ -27,7 +26,7 @@ class BoardRepo
             'id' => $boardID
         ]);
 
-       return (bool) $stmt->fetchColumn();
+        return (bool) $stmt->fetchColumn();
     }
 
     private function insertPlayerID(string|int $playerID): false|string
@@ -80,7 +79,7 @@ class BoardRepo
         return $stmt->fetchColumn();
     }
 
-    private function setWinner(string|int $winnerID, string|int $boardID): int|string
+    private function setWinner(string|int $winnerID, string|int $boardID): void
     {
         $this->db->run(
             "UPDATE " . self::TABLE . "
@@ -92,8 +91,6 @@ class BoardRepo
                 'id' => $boardID
             ]
         );
-
-        return $winnerID;
     }
 
     private function getNextPlayerID(string|int $boardID): int|string|false
@@ -170,7 +167,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getBoardByID(string|int $boardID): array
+    public function getBoardByID(string|int $boardID): array|false
     {
         $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
 
@@ -178,16 +175,10 @@ class BoardRepo
             throw new GameValidationException('Board ID is invalid', ['The board ID must be a positive integer']);
 
         try {
-            $result = $this->getBoardRowByID($boardID);
+            return $this->getBoardRowByID($boardID);
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Board lookup failed');
-        }
-
-        if (is_array($result)) {
-            return $result;
-        } else {
-            throw new GameFaultException('Failed to fetch board data');
         }
     }
 
@@ -285,7 +276,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function setBoardWinner(string|int $winnerID, string|int $boardID): string|int
+    public function setBoardWinner(string|int $winnerID, string|int $boardID): void
     {
         $filteredWinnerID = filter_var($winnerID, FILTER_VALIDATE_INT);
 
@@ -298,7 +289,7 @@ class BoardRepo
             throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
 
         try {
-            return $this->setWinner($filteredWinnerID, $filteredBoardID);
+            $this->setWinner($filteredWinnerID, $filteredBoardID);
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Internal server error: failed persisting winner');
