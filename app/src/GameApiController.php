@@ -7,7 +7,9 @@ use JsonException;
 use MediumDubb\ConnectFour\Domains\Player;
 use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
-use MediumDubb\ConnectFour\Services\BoardRequestHandler;
+use MediumDubb\ConnectFour\Services\CreateRequestHandler;
+use MediumDubb\ConnectFour\Services\GetterRequestHandler;
+use MediumDubb\ConnectFour\Services\JoinRequestHandler;
 use MediumDubb\ConnectFour\Services\SessionService;
 use MediumDubb\ConnectFour\Services\DropRequestHandler;
 
@@ -32,7 +34,7 @@ class GameApiController
     public function dropToken(): void
     {
         $this->handleRequest(function():array {
-            $handler = DropRequestHandler::fromTokenDropRequest($this->getUid());
+            $handler = DropRequestHandler::validateRequest($this->getUid());
             $handler->setToken();
             $handler->setWinnerIfExists();
 
@@ -50,7 +52,8 @@ class GameApiController
     public function getBoardState(): void
     {
         $this->handleRequest(function():array {
-            $board = BoardRequestHandler::boardFromGetterRequest();
+            $handler = GetterRequestHandler::validateRequest();
+            $board = $handler->getTheBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
     }
@@ -61,7 +64,8 @@ class GameApiController
     public function create(): void
     {
         $this->handleRequest(function():array {
-            $board = BoardRequestHandler::boardFromCreateRequest($this->getUid());
+            $handler = CreateRequestHandler::validateRequest($this->getUid());
+            $board = $handler->createAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
     }
@@ -72,7 +76,8 @@ class GameApiController
     public function join(): void
     {
         $this->handleRequest(function(): array {
-            $board = BoardRequestHandler::boardFromJoinRequest($this->getUid());
+            $handler = JoinRequestHandler::validateRequest($this->getUid());
+            $board = $handler->joinAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
     }

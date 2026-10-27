@@ -29,7 +29,7 @@ class DropRequestHandler
      * @throws ApiException
      * @throws GameValidationException
      */
-    public static function fromTokenDropRequest(int $sessionPlayerId): self
+    public static function validateRequest(int $sessionPlayerId): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET')
             throw new GameValidationException("Invalid request method", ["This endpoint requires a GET request method"]);
@@ -60,9 +60,9 @@ class DropRequestHandler
 
         if (
             (
-                $filteredColumn !== false &&
-                $filteredColumn >= 0 &&
-                $filteredColumn < 7
+                $filteredColumn === false ||
+                $filteredColumn < 0 ||
+                $filteredColumn >= 7
             )
         )
             throw new GameValidationException("Invalid token request", ['`' . self::COLUMN_PARAM . '` parameter is required with seven possible columns values (int)[0-6].']);

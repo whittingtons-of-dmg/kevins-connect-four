@@ -167,13 +167,8 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getBoardByID(string|int $boardID): array|false
+    public function getBoardByID(int $boardID): array|false
     {
-        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
-
-        if ($filteredBoardID === false)
-            throw new GameValidationException('Board ID is invalid', ['The board ID must be a positive integer']);
-
         try {
             return $this->getBoardRowByID($boardID);
         } catch (PDOException $e) {
