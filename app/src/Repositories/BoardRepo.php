@@ -16,7 +16,7 @@ class BoardRepo
 
     public function __construct(private readonly PDOConnector $db) {}
 
-    private function getBoardTokens(string|int $boardID): array|false
+    private function getBoardTokens(string|int $boardId): array|false
     {
         $stmt = $this->db->run(
             "SELECT 
@@ -28,7 +28,7 @@ class BoardRepo
                     WHERE board = :boardID
                     ORDER BY board_column ASC, board_row ASC",
             [
-                'boardID' => $boardID,
+                'boardID' => $boardId,
             ]
         );
 
@@ -38,13 +38,13 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getBoardById(int $boardID): array|false
+    public function getBoardById(int $boardId): array|false
     {
         try {
             $stmt = $this->db->run(
                 "SELECT * FROM " . self::TABLE . " WHERE id = :boardID LIMIT 1",
                 [
-                    ':boardID' => $boardID
+                    ':boardID' => $boardId
                 ]
             );
 
@@ -58,13 +58,13 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function createAndGetId(string|int $playerID): int|false
+    public function createAndGetId(string|int $playerId): int|false
     {
         try {
             $this->db->run(
                 "INSERT INTO " . self::TABLE . " (player1) VALUES (:player_one_id)",
                 [
-                    'player_one_id' => $playerID,
+                    'player_one_id' => $playerId,
                 ]
             );
 
@@ -78,7 +78,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function joinAndGetRowCount(int $boardID, int $playerTwoID): int
+    public function joinAndGetRowCount(int $boardId, int $playerTwoId): int
     {
         try {
             $stmt = $this->db->run(
@@ -87,9 +87,9 @@ class BoardRepo
                     WHERE id = :id
                     AND player2 IS NULL",
                 [
-                    'player_two_id' => $playerTwoID,
-                    'current_player_id' => $playerTwoID,
-                    'id' => $boardID,
+                    'player_two_id' => $playerTwoId,
+                    'current_player_id' => $playerTwoId,
+                    'id' => $boardId,
                 ]
             );
 
@@ -104,11 +104,11 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function boardExists(string|int $boardID): bool
+    public function boardExists(string|int $boardId): bool
     {
         try {
             $stmt = $this->db->run("SELECT 1 FROM " . self::TABLE . " WHERE id = :id LIMIT 1", [
-                'id' => $boardID
+                'id' => $boardId
             ]);
 
             return (bool) $stmt->fetchColumn();
@@ -121,7 +121,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function setBoardWinner(string|int $winnerID, string|int $boardID): void
+    public function setBoardWinner(string|int $winnerId, string|int $boardId): void
     {
         try {
             $this->db->run(
@@ -130,8 +130,8 @@ class BoardRepo
                     WHERE id = :id
                     AND winner = NULL",
                 [
-                    'winner_id' => $winnerID,
-                    'id' => $boardID
+                    'winner_id' => $winnerId,
+                    'id' => $boardId
                 ]
             );
         } catch (PDOException $e) {
@@ -143,7 +143,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getNextPlayerID(string|int $boardID):int|false
+    public function getNextPlayerID(string|int $boardId):int|false
     {
         try {
             $stmt = $this->db->run(
@@ -155,7 +155,7 @@ class BoardRepo
                 FROM " . self::TABLE . "
                 WHERE id = :boardID",
                 [
-                    'boardID' => $boardID
+                    'boardID' => $boardId
                 ]
             );
 
@@ -194,13 +194,13 @@ class BoardRepo
      */
     public function getTokensByBoardID(string|int $boardID): array
     {
-        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+        $filteredBoardId = filter_var($boardID, FILTER_VALIDATE_INT);
 
-        if ($filteredBoardID === false)
+        if ($filteredBoardId === false)
             throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
 
         try {
-            $tokens = $this->getBoardTokens($filteredBoardID);
+            $tokens = $this->getBoardTokens($filteredBoardId);
             if (!empty($tokens)) {
                 return array_map(fn($row) => Token::fromDB($row), $tokens);
             } else {
