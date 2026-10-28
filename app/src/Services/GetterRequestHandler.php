@@ -34,17 +34,17 @@ readonly class GetterRequestHandler
         if (is_null($boardID))
             throw new GameValidationException("Invalid board request", ["Missing parameter `" . self::API_BOARD_ID_PARAM ."` from request"]);
 
-        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+        $filteredBoardId = filter_var($boardID, FILTER_VALIDATE_INT);
 
         if (
-            $filteredBoardID === false ||
-            $filteredBoardID <= 0
+            $filteredBoardId === false ||
+            $filteredBoardId <= 0
         )
             throw new GameValidationException( "Invalid board request", ["Board ID must be integer greater than 0"]);
 
             return new self(
                 $db,
-                $filteredBoardID
+                $filteredBoardId
             );
     }
 

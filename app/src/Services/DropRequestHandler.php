@@ -40,22 +40,22 @@ class DropRequestHandler
         $boardId = $_GET[self::BOARD_PARAM] ?? null;
         $column = $_GET[self::COLUMN_PARAM] ?? null;
 
-        $filteredPlayerID = filter_var($playerId, FILTER_VALIDATE_INT);
-        $filteredBoardID = filter_var($boardId, FILTER_VALIDATE_INT);
+        $filteredPlayerId = filter_var($playerId, FILTER_VALIDATE_INT);
+        $filteredBoardId = filter_var($boardId, FILTER_VALIDATE_INT);
         $filteredColumn = filter_var($column, FILTER_VALIDATE_INT);
 
         if (
             (
-                $filteredBoardID === false ||
-                $filteredBoardID <= 0
+                $filteredBoardId === false ||
+                $filteredBoardId <= 0
             )
         )
             throw new GameValidationException("Invalid token request", ['`' . self::BOARD_PARAM . '` parameter is required and must be a positive integer greater than zero']);
 
         if (
             (
-                $filteredPlayerID === false ||
-                $filteredPlayerID <= 0
+                $filteredPlayerId === false ||
+                $filteredPlayerId <= 0
             )
         )
             throw new GameValidationException("Invalid token request", ['`' . self::PLAYER_PARAM . '` parameter is required and must be a positive integer greater than zero']);

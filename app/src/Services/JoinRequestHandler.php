@@ -30,28 +30,28 @@ class JoinRequestHandler
             throw new GameValidationException( "Invalid request method", ["The request method must be GET"] );
 
         $boardID = $_GET[self::API_BOARD_ID_PARAM] ?? null;
-        $filteredPlayerID = filter_var($playerId, FILTER_VALIDATE_INT);
+        $filteredPlayerId = filter_var($playerId, FILTER_VALIDATE_INT);
 
         if (is_null($boardID))
             throw new GameValidationException("Invalid board request", ["Missing parameter `" . self::API_BOARD_ID_PARAM . "` from request"]);
 
         if (
-            $filteredPlayerID === false ||
-            $filteredPlayerID <= 0
+            $filteredPlayerId === false ||
+            $filteredPlayerId <= 0
         )
             throw new GameValidationException( "Player assignment error", ["Please report to site admin"]);
 
-        $filteredBoardID = filter_var($boardID, FILTER_VALIDATE_INT);
+        $filteredBoardId = filter_var($boardID, FILTER_VALIDATE_INT);
 
         if (
-            $filteredBoardID === false ||
-            $filteredBoardID <= 0
+            $filteredBoardId === false ||
+            $filteredBoardId <= 0
         )
             throw new GameValidationException( "Invalid board request", ["Parameter `" . self::API_BOARD_ID_PARAM . "` must be integer greater than 0"]);
 
         return new self (
             $db,
-            $filteredBoardID,
+            $filteredBoardId,
             $playerId
         );
     }

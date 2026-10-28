@@ -27,11 +27,11 @@ readonly class CreateRequestHandler
             throw new GameValidationException("Invalid request method", ["The request method must be POST"]);
         }
 
-        $filteredPlayerID = filter_var($playerId, FILTER_VALIDATE_INT);
+        $filteredPlayerId = filter_var($playerId, FILTER_VALIDATE_INT);
 
         if (
-            $filteredPlayerID === false ||
-            $filteredPlayerID <= 0
+            $filteredPlayerId === false ||
+            $filteredPlayerId <= 0
         )
             throw new GameValidationException( "Player assignment error", ["Please report to site admin"]);
 
