@@ -34,14 +34,14 @@ class PlayerRepo
     /**
      * @throws ApiException
      */
-    public function getPlayerByID(string|int $playerID): array|false
+    public function getPlayerByID(string|int $playerId): array|false
     {
 
         try {
             $stmt = $this->db->run(
                 "SELECT * FROM ". self::TABLE_NAME ." WHERE id = :id",
                 [
-                    ':id' => $playerID
+                    ':id' => $playerId
                 ]
             );
 
