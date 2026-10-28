@@ -3,8 +3,6 @@
 namespace MediumDubb\ConnectFour\Repositories;
 
 use MediumDubb\ConnectFour\Exceptions\ApiException;
-use MediumDubb\ConnectFour\Exceptions\GameValidationException;
-use MediumDubb\ConnectFour\Exceptions\NotFoundException;
 use MediumDubb\ConnectFour\PDOConnector;
 use PDO;
 use PDOException;
