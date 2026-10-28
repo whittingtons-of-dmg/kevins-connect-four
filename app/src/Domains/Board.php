@@ -19,10 +19,13 @@ final class Board
     ){}
 
     public static function fromDB(array $row, array $tokens): self {
+        $p1 = Player::fromId($row['player1']);
+        $p2 = $row['player2'] ? Player::fromId($row['player2']) : null;
+
         return new self(
             id: $row['id'],
-            player1: $row['player1'],
-            player2: $row['player2'],
+            player1: $p1,
+            player2: $p2,
             current_player: $row['current_player'],
             winner: $row['winner'],
             tokens: $tokens,

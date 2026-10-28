@@ -11,6 +11,11 @@ final readonly class Player
             id: $row['id'],
         );
     }
+    public static function fromId(int $id): self {
+        return new self(
+            id: $id,
+        );
+    }
 
     public function getPlayerID(): int
     {
