@@ -2,7 +2,6 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
-use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
@@ -56,7 +55,7 @@ readonly class GetterRequestHandler
         $boardRow = $this->boardRepo->getBoardByID($this->boardId);
 
         if (!is_array($boardRow))
-            throw new ValidationException( "Failed to get requested board");
+            throw new GameValidationException( "Failed to get requested board");
 
         $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
 

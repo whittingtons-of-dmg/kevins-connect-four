@@ -2,7 +2,7 @@
 
 namespace MediumDubb\ConnectFour;
 
-use Dotenv\Exception\ValidationException;
+
 use JetBrains\PhpStorm\NoReturn;
 use JsonException;
 use MediumDubb\ConnectFour\DTO\BoardDTO;
@@ -90,7 +90,7 @@ class GameApiController
             $payload = $action();
             $statusCode = 200;
         } catch (ApiException $e) {
-            $statusCode = $e->getCode();
+            $statusCode = $e->getStatusCode();
 
             $payload = [
                 'status_code' => $statusCode,
@@ -143,7 +143,7 @@ class GameApiController
         $returnedId = new PlayerRepo($this->db)->insertAndGetID();
 
         if ($returnedId === false)
-            throw new ValidationException('Failed to assign new player ID');
+            throw new GameValidationException('Failed to assign new player ID');
 
         return (int) $returnedId;
     }

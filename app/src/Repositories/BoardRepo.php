@@ -82,10 +82,11 @@ class BoardRepo
     {
         try {
             $stmt = $this->db->run(
-                "UPDATE " . self::TABLE . "
-                    SET (player2, current_player) = (:player_two_id, :current_player_id)
-                    WHERE id = :id
-                    AND player2 IS NULL",
+            "UPDATE " . self::TABLE . "
+                SET player2 = :player_two_id,
+                    current_player = :current_player_id
+                WHERE id = :id
+                AND player2 IS NULL",
                 [
                     'player_two_id' => $playerTwoId,
                     'current_player_id' => $playerTwoId,
@@ -115,6 +116,25 @@ class BoardRepo
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Internal server error: failed on open board lookup',);
+        }
+    }
+    /**
+     * @throws ApiException
+     */
+    public function boardIsFull(string|int $boardId): bool
+    {
+        try {
+            $stmt = $this->db->run("SELECT 1 FROM " . self::TABLE . " 
+                WHERE id = :id 
+                    AND player1 IS NOT NULL
+                    AND player2 IS NOT NULL LIMIT 1", [
+                'id' => $boardId
+            ]);
+
+            return (bool) $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed board check',);
         }
     }
 

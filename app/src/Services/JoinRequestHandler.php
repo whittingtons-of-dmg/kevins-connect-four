@@ -2,7 +2,6 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
-use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
@@ -66,15 +65,18 @@ class JoinRequestHandler
         if (!$exists)
             throw new NotFoundException("The board you are trying to join doesn't exist");
 
+        if ($this->boardRepo->boardIsFull($this->boardId))
+            throw new GameValidationException('The requested board is full');
+
         $affectedRowCount = $this->boardRepo->joinAndGetRowCount($this->boardId, $this->playerId);
 
         if ($affectedRowCount === 0)
-            throw new ValidationException('Board is not joinable');
+            throw new GameValidationException('Board is not joinable');
 
         $boardRow = $this->boardRepo->getBoardById($this->boardId);
 
         if ($boardRow === false)
-            throw new ValidationException("Failed to get the board");
+            throw new GameValidationException("Failed to get the board");
 
         $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
 
