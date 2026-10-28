@@ -6,8 +6,6 @@ use MediumDubb\ConnectFour\Interfaces\SessionInterface;
 
 class SessionService implements SessionInterface
 {
-
-
     public function __construct(?string $cacheExpire = null, ?string $cacheLimiter = null)
     {
         if (session_status() === PHP_SESSION_NONE) {
