@@ -3,7 +3,6 @@
 namespace MediumDubb\ConnectFour\Domains;
 
 use MediumDubb\ConnectFour\Exceptions\ApiException;
-use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
 final class Board
 {
@@ -19,12 +18,7 @@ final class Board
         private array            $tokens = [],
     ){}
 
-    /**
-     * @throws ApiException
-     */
-    public static function fromDB(array $row): self {
-        $tokens = new BoardRepo()->getTokensByBoardID($row['id']);
-
+    public static function fromDB(array $row, array $tokens): self {
         return new self(
             id: $row['id'],
             player1: $row['player1'],

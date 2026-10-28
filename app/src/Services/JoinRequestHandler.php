@@ -2,9 +2,11 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
+use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
+use MediumDubb\ConnectFour\Exceptions\NotFoundException;
 use MediumDubb\ConnectFour\PDOConnector;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
@@ -12,17 +14,17 @@ class JoinRequestHandler
 {
     private const string API_BOARD_ID_PARAM = 'boardId';
 
-    private PDOConnector $db;
+    private BoardRepo $boardRepo;
 
-    public function __construct(private readonly int $boardId, private readonly int $playerId)
+    public function __construct(private readonly PDOConnector $db, private readonly int $boardId, private readonly int $playerId)
     {
-        $this->db = new PDOConnector();
+        $this->boardRepo = new BoardRepo($this->db);
     }
 
     /**
      * @throws GameValidationException
      */
-    public static function validateRequest(string|int $playerId): self
+    public static function buildRequestHandler(PDOConnector $db, string|int $playerId): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET')
             throw new GameValidationException( "Invalid request method", ["The request method must be GET"] );
@@ -48,6 +50,7 @@ class JoinRequestHandler
             throw new GameValidationException( "Invalid board request", ["Parameter `" . self::API_BOARD_ID_PARAM . "` must be integer greater than 0"]);
 
         return new self (
+            $db,
             $filteredBoardID,
             $playerId
         );
@@ -58,7 +61,23 @@ class JoinRequestHandler
      */
     public function joinAndGetBoard(): Board
     {
-        $updatedRow = new BoardRepo($this->db)->join($this->boardId, $this->playerId);
-        return Board::fromDB($updatedRow);
+        $exists = $this->boardRepo->boardExists($this->boardId);
+
+        if (!$exists)
+            throw new NotFoundException("The board you are trying to join doesn't exist");
+
+        $affectedRowCount = $this->boardRepo->joinAndGetRowCount($this->boardId, $this->playerId);
+
+        if ($affectedRowCount === 0)
+            throw new ValidationException('Board is not joinable');
+
+        $boardRow = $this->boardRepo->getBoardById($this->boardId);
+
+        if ($boardRow === false)
+            throw new ValidationException("Failed to get the board");
+
+        $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
+
+        return Board::fromDB($boardRow, $tokens);
     }
 }

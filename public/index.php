@@ -25,11 +25,13 @@ set_exception_handler([$exceptionHandler, 'handle']);
 $dotenv = Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->load();
 
+$dbConnection = new PDOConnector();
+
 $router = AppRouter::getRouter();
-$router->get('/join-room', [new GameApiController(), 'join']);
-$router->get('/get-board-state', [new GameApiController(), 'getBoardState']);
-$router->get('/drop-token', [new GameApiController(), 'dropToken']);
-$router->post('/create-room', [new GameApiController(), 'create']);
+$router->get('/join-room', [new GameApiController($dbConnection), 'join']);
+$router->get('/get-board-state', [new GameApiController($dbConnection), 'getBoardState']);
+$router->get('/drop-token', [new GameApiController($dbConnection), 'dropToken']);
+$router->post('/create-room', [new GameApiController($dbConnection), 'create']);
 
 // Run the router using the server request data
 try {

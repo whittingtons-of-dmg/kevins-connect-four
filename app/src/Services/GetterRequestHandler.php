@@ -2,10 +2,10 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
+use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
-use MediumDubb\ConnectFour\Exceptions\NotFoundException;
 use MediumDubb\ConnectFour\PDOConnector;
 use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
@@ -13,17 +13,17 @@ readonly class GetterRequestHandler
 {
     private const string API_BOARD_ID_PARAM = 'boardId';
 
-    private PDOConnector $db;
+    private BoardRepo $boardRepo;
 
-    public function __construct(private int $boardId)
+    public function __construct(private PDOConnector $db, private int $boardId)
     {
-        $this->db = new PDOConnector();
+        $this->boardRepo = new BoardRepo($this->db);
     }
 
     /**
      * @throws GameValidationException
      */
-    public static function validateRequest(): self
+    public static function buildRequestHandler(PDOConnector $db): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
             throw new GameValidationException( "Invalid request method", ["The request method must be GET"] );
@@ -42,7 +42,10 @@ readonly class GetterRequestHandler
         )
             throw new GameValidationException( "Invalid board request", ["Board ID must be integer greater than 0"]);
 
-            return new self($filteredBoardID);
+            return new self(
+                $db,
+                $filteredBoardID
+            );
     }
 
     /**
@@ -50,11 +53,13 @@ readonly class GetterRequestHandler
      */
     public function getTheBoard(): Board
     {
-        $boardRow = new BoardRepo($this->db)->getBoardByID($this->boardId);
+        $boardRow = $this->boardRepo->getBoardByID($this->boardId);
 
         if (!is_array($boardRow))
-            throw new NotFoundException( "The requested board was not found");
-        else
-            return Board::fromDB($boardRow);
+            throw new ValidationException( "Failed to get requested board");
+
+        $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
+
+        return Board::fromDB($boardRow, $tokens);
     }
 }

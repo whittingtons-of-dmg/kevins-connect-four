@@ -15,34 +15,17 @@ class PlayerRepo
 
     public function __construct(private readonly PDOConnector $db) {}
 
-    private function makeNewPlayer(): false|string
-    {
-        $this->db->run(
-            "INSERT INTO ". self::TABLE_NAME ." () VALUES ()"
-        );
-
-        return $this->db->pdo->lastInsertId();
-    }
-
-    private function getPlayerRow(string|int $playerID): false|array
-    {
-        $stmt = $this->db->run(
-            "SELECT * FROM ". self::TABLE_NAME ." WHERE id = :id",
-            [
-                ':id' => $playerID
-            ]
-        );
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
     /**
      * @throws ApiException
      */
-    public function getNewPlayerID(): int
+    public function insertAndGetID(): string|false
     {
         try {
-            return $this->makeNewPlayer();
+            $this->db->run(
+                "INSERT INTO ". self::TABLE_NAME ." () VALUES ()"
+            );
+
+            return $this->db->pdo->lastInsertId();
         } catch (PDOException $e) {
             throw new ApiException( 'Failed to create new player', 500);
         }
@@ -51,19 +34,18 @@ class PlayerRepo
     /**
      * @throws ApiException
      */
-    public function getPlayerByID(string|int $playerID): array
+    public function getPlayerByID(string|int $playerID): array|false
     {
-        $filteredPlayerID = filter_var($playerID, FILTER_VALIDATE_INT);
-
-        if ($filteredPlayerID === false)
-            throw new GameValidationException('Player ID is invalid', ['The player ID must be a positive integer']);
 
         try {
-            if ($playerRow = $this->getPlayerRow($filteredPlayerID))
-                return $playerRow;
-            else
-                throw new NotFoundException( 'Player not found, or doesn\'t exist');
+            $stmt = $this->db->run(
+                "SELECT * FROM ". self::TABLE_NAME ." WHERE id = :id",
+                [
+                    ':id' => $playerID
+                ]
+            );
 
+            return $stmt->fetch(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             throw new ApiException('Failed to get player', 500);
         }

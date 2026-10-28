@@ -4,8 +4,8 @@ namespace MediumDubb\ConnectFour\Services;
 
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Domains\Token;
-use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\Exceptions\GameConflictException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\Exceptions\NotFoundException;
 use MediumDubb\ConnectFour\PDOConnector;
@@ -18,18 +18,20 @@ class DropRequestHandler
     private const string PLAYER_PARAM = 'playerId';
     private const string COLUMN_PARAM = 'column';
 
-    private PDOConnector $db;
+    private TokenRepo $tokenRepo;
+    private BoardRepo $boardRepo;
 
-    public function __construct(private readonly int $boardId, private readonly int $playerId, private readonly int $column)
+    public function __construct(private readonly PDOConnector $db, private readonly int $boardId, private readonly int $playerId, private readonly int $column)
     {
-        $this->db = new PDOConnector();
+        $this->tokenRepo = new TokenRepo($this->db);
+        $this->boardRepo = new BoardRepo($this->db);
     }
 
     /**
      * @throws ApiException
      * @throws GameValidationException
      */
-    public static function validateRequest(): self
+    public static function buildRequestHandler(PDOConnector $db): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET')
             throw new GameValidationException("Invalid request method", ["This endpoint requires a GET request method"]);
@@ -67,7 +69,7 @@ class DropRequestHandler
         )
             throw new GameValidationException("Invalid token request", ['`' . self::COLUMN_PARAM . '` parameter is required with seven possible columns values (int)[0-6].']);
 
-        return new self($boardId, $playerId, $column);
+        return new self($db, $boardId, $playerId, $column);
     }
 
     /**
@@ -90,12 +92,12 @@ class DropRequestHandler
      */
     public function getTheBoard(): Board
     {
-        $boardRow = new BoardRepo($this->db)->getBoardByID($this->boardId);
+        $boardRow = $this->boardRepo->getBoardByID($this->boardId);
 
         if (!$boardRow)
             throw new NotFoundException("Invalid token request", ['The requested board doesn\'t exist']);
 
-        return Board::fromDB($boardRow);
+        return Board::fromDB($boardRow, $this->getBoardTokens());
     }
 
     /**
@@ -104,7 +106,7 @@ class DropRequestHandler
      */
     public function getColumnRow(): int
     {
-        $columnRow = new TokenRepo(new PDOConnector())->getColRowCount($this->boardId, $this->column);
+        $columnRow = $this->tokenRepo->getColRowCount($this->boardId, $this->column);
 
         if ($columnRow > 6)
             throw new GameValidationException('The selected board column is full', ['This column has more than six tokens']);
@@ -112,13 +114,17 @@ class DropRequestHandler
         return $columnRow;
     }
 
-    /**
-     * @throws GameValidationException
-     * @throws ApiException
-     */
     public function getTheToken(int $row): Token
     {
         return new Token($this->boardId, $this->playerId, $this->column, $row);
+    }
+
+    /**
+     * @throws ApiException
+     */
+    private function getBoardTokens(): array
+    {
+        return $this->boardRepo->getTokensByBoardID($this->boardId);
     }
 
     private function matchEnded(Board $board): bool
@@ -131,7 +137,7 @@ class DropRequestHandler
      */
     private function setToken(Board $board, Token $token): void
     {
-        new TokenRepo($this->db)->setToken($token);
+        $this->tokenRepo->setToken($token);
         $board->setToken($token);
     }
 
@@ -140,9 +146,14 @@ class DropRequestHandler
      */
     private function updateTurn(Board $board): void
     {
-        $nextPlayer = new BoardRepo($this->db)->updateTurn($board->getBoardID());
-        if ($nextPlayer)
-            $board->setCurrentPlayer($nextPlayer);
+        $nextPlayerId = $this->boardRepo->getNextPlayerID($board->getBoardID());
+
+        if (!$nextPlayerId)
+            throw new GameConflictException('Failed to get next player');
+
+        $this->boardRepo->assignCurrentPlayer($board->getBoardID(), $nextPlayerId);
+
+        $board->setCurrentPlayer($nextPlayerId);
     }
 
     /**
@@ -151,7 +162,7 @@ class DropRequestHandler
     private function setWinnerIfExists(Board $board): void
     {
         if ($winnerId = $this->getWinner($board, $board->popToken())) {
-            new BoardRepo($this->db)->setBoardWinner($winnerId, $board->getBoardID());
+            $this->boardRepo->setBoardWinner($winnerId, $board->getBoardID());
             $board->setWinner($winnerId);
         }
     }

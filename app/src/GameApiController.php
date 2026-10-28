@@ -2,11 +2,12 @@
 
 namespace MediumDubb\ConnectFour;
 
+use Dotenv\Exception\ValidationException;
 use JetBrains\PhpStorm\NoReturn;
 use JsonException;
-use MediumDubb\ConnectFour\Domains\Player;
 use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\Repositories\PlayerRepo;
 use MediumDubb\ConnectFour\Services\CreateRequestHandler;
 use MediumDubb\ConnectFour\Services\GetterRequestHandler;
 use MediumDubb\ConnectFour\Services\JoinRequestHandler;
@@ -25,6 +26,7 @@ class GameApiController
      *
      * Write tests around the win-condition bug in TokenHandler.
      */
+    public function __construct(private readonly PDOConnector $db){}
 
     private const string UID_KEY = 'UID';
 
@@ -34,7 +36,7 @@ class GameApiController
     public function dropToken(): void
     {
         $this->handleRequest(function():array {
-            $handler = DropRequestHandler::validateRequest();
+            $handler = DropRequestHandler::buildRequestHandler($this->db);
             $board = $handler->getTheBoard();
             $colRow = $handler->getColumnRow();
             $token = $handler->getTheToken($colRow);
@@ -49,7 +51,7 @@ class GameApiController
     public function getBoardState(): void
     {
         $this->handleRequest(function():array {
-            $handler = GetterRequestHandler::validateRequest();
+            $handler = GetterRequestHandler::buildRequestHandler($this->db);
             $board = $handler->getTheBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
@@ -61,7 +63,7 @@ class GameApiController
     public function create(): void
     {
         $this->handleRequest(function():array {
-            $handler = CreateRequestHandler::validateRequest($this->getUid());
+            $handler = CreateRequestHandler::buildRequestHandler($this->db, $this->getUid());
             $board = $handler->createAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
@@ -73,7 +75,7 @@ class GameApiController
     public function join(): void
     {
         $this->handleRequest(function(): array {
-            $handler = JoinRequestHandler::validateRequest($this->getUid());
+            $handler = JoinRequestHandler::buildRequestHandler($this->db, $this->getUid());
             $board = $handler->joinAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
@@ -126,10 +128,23 @@ class GameApiController
         }
 
         if (!$uid = $session->get(self::UID_KEY)) {
-            $uid = $_GET['playerID'] ?? Player::create()->getPlayerID();
+            $uid = $_GET['playerID'] ?? $this->assignNewPlayer();
             $session->set(self::UID_KEY, $uid);
         }
 
         return $uid;
+    }
+
+    /**
+     * @throws ApiException
+     */
+    private function assignNewPlayer(): int
+    {
+        $returnedId = new PlayerRepo($this->db)->insertAndGetID();
+
+        if ($returnedId === false)
+            throw new ValidationException('Failed to assign new player ID');
+
+        return (int) $returnedId;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
+use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
@@ -10,17 +11,17 @@ use MediumDubb\ConnectFour\Repositories\BoardRepo;
 
 readonly class CreateRequestHandler
 {
-    private PDOConnector $db;
+    private BoardRepo $boardRepo;
 
-    public function __construct(private int $playerId)
+    public function __construct(private PDOConnector $db, private int $playerId)
     {
-        $this->db = new PDOConnector();
+        $this->boardRepo = new BoardRepo($this->db);
     }
 
     /**
      * @throws GameValidationException
      */
-    public static function validateRequest(string|int $playerId): self
+    public static function buildRequestHandler(PDOConnector $db, string|int $playerId): self
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             throw new GameValidationException("Invalid request method", ["The request method must be POST"]);
@@ -35,6 +36,7 @@ readonly class CreateRequestHandler
             throw new GameValidationException( "Player assignment error", ["Please report to site admin"]);
 
         return new self (
+            $db,
             $playerId
         );
     }
@@ -44,7 +46,12 @@ readonly class CreateRequestHandler
      */
     public function createAndGetBoard(): Board
     {
-        $newBoard = new BoardRepo($this->db)->create($this->playerId);
-        return Board::fromDB($newBoard);
+        $boardId = $this->boardRepo->createAndGetId($this->playerId);
+        $boardRow = $this->boardRepo->getBoardById($boardId);
+
+        if (!is_array($boardRow))
+            throw new ValidationException('Failed to get requested board');
+
+        return Board::fromDB($boardRow, []);
     }
 }
