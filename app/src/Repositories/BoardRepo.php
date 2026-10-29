@@ -196,9 +196,9 @@ class BoardRepo
         try {
             $this->db->run(
                 "UPDATE " . self::TABLE . "
-                    SET current_player_id = :current_player_id
+                    SET current_player = :current_player_id
                     WHERE id = :id
-                    AND board_finished = 0",
+                    AND winner = NULL",
                 [
                     'current_player_id' => $playerID,
                     'id' => $boardID
