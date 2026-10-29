@@ -60,7 +60,7 @@ readonly class GetterRequestHandler
 
         $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
 
-        $tokens = Board::dbToTokenList($tokens);
+        $tokens = Board::getTokenObjectList($tokens);
 
         return Board::fromDB($boardRow, $tokens);
     }

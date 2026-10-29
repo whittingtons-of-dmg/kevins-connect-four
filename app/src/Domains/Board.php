@@ -2,12 +2,11 @@
 
 namespace MediumDubb\ConnectFour\Domains;
 
-use MediumDubb\ConnectFour\Exceptions\ApiException;
-
 final class Board
 {
     public int $cols = 7;
     public int $rows = 6;
+    public int $match2Win = 4;
 
     public function __construct(
         private readonly int     $id,
@@ -32,7 +31,7 @@ final class Board
         );
     }
 
-    public static function dbToTokenList(false|array $tokens): array
+    public static function getTokenObjectList(false|array $tokens): array
     {
         if (!empty($tokens)) {
             return array_map(fn($row) => Token::fromDB($row), $tokens);
@@ -91,34 +90,14 @@ final class Board
         $this->player2 = $p2;
     }
 
+    public function boardIsFull(): bool
+    {
+        return count($this->getTokens()) >= 42;
+    }
+
     public function validateCurrentPlayer(int $playerIdFromRequest, int $sessionPlayerId): bool
     {
         $boardCurrentPlayer = $this->getCurrentPlayer();
         return ( $boardCurrentPlayer === $playerIdFromRequest ) && ($playerIdFromRequest === $sessionPlayerId);
-    }
-
-    /**
-     * @throws ApiException
-     */
-    public function getBoardAsArray(): array
-    {
-        $boardRows = [];
-        $tokens = $this->getTokens();
-
-        for ($r = ($this->rows - 1); $r >= 0; $r--) {
-            for ($c = 0; $c < $this->cols; $c++) {
-                $pID = null;
-                foreach ($tokens as $tokenIndex => $token) {
-                    if ($token->getBoardColumn() === $c && $token->getBoardRow() === $r) {
-                        $pID = $token->getPlayerID();
-                        unset($tokens[$tokenIndex]);
-                        break;
-                    }
-                }
-                $boardRows[$r][] = $pID;
-            }
-        }
-
-        return $boardRows;
     }
 }

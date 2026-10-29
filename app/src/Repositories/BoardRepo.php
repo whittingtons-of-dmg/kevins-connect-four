@@ -59,6 +59,55 @@ class BoardRepo
     /**
      * @throws ApiException
      */
+    public function getBoardCurrentPlayerId(int $boardId): int|false
+    {
+        try {
+            $stmt = $this->db->run(
+                "SELECT current_player FROM " . self::TABLE . " WHERE id = :boardId LIMIT 1",
+                [
+                    ':boardId' => $boardId
+                ]
+            );
+
+            return $stmt->fetchColumn();
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Board lookup failed');
+        }
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function getPlayerTokens(int $boardId, int $playerId): array|false
+    {
+        try {
+            $stmt = $this->db->run(
+                "SELECT 
+                    board,
+                    player,
+                    board_column,
+                    board_row
+                    FROM " . self::TOKENS_TABLE ."
+                    WHERE board = :boardId
+                    AND player = :playerId
+                    ORDER BY board_column ASC, board_row ASC",
+                [
+                    ':boardId' => $boardId,
+                    ':playerId' => $playerId
+                ]
+            );
+
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Board lookup failed');
+        }
+    }
+
+    /**
+     * @throws ApiException
+     */
     public function createAndGetId(string|int $playerId): int|false
     {
         try {
