@@ -69,7 +69,7 @@ class JoinRequestHandler
         if ($this->boardRepo->boardIsFull($this->boardId))
             throw new GameValidationException('The requested board is full');
 
-        if ($this->boardRepo->getBoardPlayer1($this->boardId) === $this->playerId)
+        if ($this->boardRepo->getBoardPlayer1Id($this->boardId) === $this->playerId)
             throw new ValidationException("Player 1 and Player 2 must not share the same ID");
 
         $affectedRowCount = $this->boardRepo->joinAndGetRowCount($this->boardId, $this->playerId);

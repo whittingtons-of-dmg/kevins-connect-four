@@ -39,7 +39,7 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getBoardPlayer1(int $boardId): int|false
+    public function getBoardPlayer1Id(int $boardId): int|false
     {
         try {
             $stmt = $this->db->run(
