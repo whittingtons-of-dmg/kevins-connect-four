@@ -168,6 +168,24 @@ class BoardRepo
             throw new ApiException('Internal server error: failed on open board lookup',);
         }
     }
+
+    /**
+     * @throws ApiException
+     */
+    public function boardCompleted(string|int $boardId): bool
+    {
+        try {
+            $stmt = $this->db->run("SELECT 1 FROM " . self::TABLE . " WHERE id = :id AND winner IS NOT NULL LIMIT 1", [
+                'id' => $boardId
+            ]);
+
+            return (bool) $stmt->fetchColumn() !== false;
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Internal server error: failed on open board lookup',);
+        }
+    }
+
     /**
      * @throws ApiException
      */
@@ -191,19 +209,21 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function setBoardWinner(string|int $winnerId, string|int $boardId): void
+    public function setBoardWinner(string|int $winnerId, string|int $boardId): bool
     {
         try {
-            $this->db->run(
+            $stmt = $this->db->run(
                 "UPDATE " . self::TABLE . "
                     SET winner = :winner_id
                     WHERE id = :id
-                    AND winner = NULL",
+                    AND winner IS NULL",
                 [
                     'winner_id' => $winnerId,
                     'id' => $boardId
                 ]
             );
+
+            return $stmt->rowCount() > 0;
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Internal server error: failed persisting winner');

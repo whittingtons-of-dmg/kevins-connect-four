@@ -92,12 +92,26 @@ class DropRequestHandler
      */
     public function getTheBoard(): Board
     {
+        $this->validateBoard();
+
         $boardRow = $this->boardRepo->getBoardByID($this->boardId);
 
         if (!$boardRow)
             throw new NotFoundException("Invalid token request", ['The requested board doesn\'t exist']);
 
         return Board::fromDB($boardRow, $this->getBoardTokens());
+    }
+
+    /**
+     * @throws ApiException
+     * @throws NotFoundException
+     */
+    private function validateBoard(): void
+    {
+        $completed = $this->boardRepo->boardCompleted($this->boardId);
+
+        if ($completed)
+            throw new GameConflictException("This board has been completed", ['The requested board is no longer playable']);
     }
 
     /**
@@ -163,8 +177,11 @@ class DropRequestHandler
     private function setWinnerIfExists(Board $board): void
     {
         if ($winnerId = $this->getWinner($board)) {
-            $this->boardRepo->setBoardWinner($winnerId, $board->getBoardID());
-            $board->setWinner($winnerId);
+            $winnerSet = $this->boardRepo->setBoardWinner($winnerId, $board->getBoardID());
+            if ($winnerSet)
+                $board->setWinner($winnerId);
+            else
+                throw new GameConflictException('Failed to set winner');
         }
     }
 

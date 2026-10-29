@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace MediumDubb\ConnectFour\Exceptions;
 
-use Throwable;
-
 class NotFoundException extends ApiException
 {
     public function __construct(
