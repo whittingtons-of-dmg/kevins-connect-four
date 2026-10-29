@@ -7,14 +7,14 @@ use JetBrains\PhpStorm\NoReturn;
 use JsonException;
 use MediumDubb\ConnectFour\DTO\BoardDTO;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
+use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\Repositories\PlayerRepo;
 use MediumDubb\ConnectFour\Services\CreateRequestHandler;
 use MediumDubb\ConnectFour\Services\GetterRequestHandler;
 use MediumDubb\ConnectFour\Services\JoinRequestHandler;
-use MediumDubb\ConnectFour\Services\SessionService;
 use MediumDubb\ConnectFour\Services\DropRequestHandler;
 
-class GameApiController
+readonly class GameApiController
 {
     /**
      * I'd make the refactor in this order:
@@ -26,9 +26,7 @@ class GameApiController
      *
      * Write tests around the win-condition bug in TokenHandler.
      */
-    public function __construct(private readonly PDOConnector $db){}
-
-    private const string UID_KEY = 'UID';
+    public function __construct(private PDOConnector $db){}
 
     /**
      * @throws JsonException
@@ -63,7 +61,7 @@ class GameApiController
     public function create(): void
     {
         $this->handleRequest(function():array {
-            $handler = CreateRequestHandler::buildRequestHandler($this->db, $this->getUid());
+            $handler = CreateRequestHandler::buildRequestHandler($this->db, $this->assignAndGetPlayerId());
             $board = $handler->createAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
@@ -75,7 +73,7 @@ class GameApiController
     public function join(): void
     {
         $this->handleRequest(function(): array {
-            $handler = JoinRequestHandler::buildRequestHandler($this->db, $this->getUid());
+            $handler = JoinRequestHandler::buildRequestHandler($this->db, $this->assignAndGetPlayerId());
             $board = $handler->joinAndGetBoard();
             return BoardDTO::fromDomain($board)->toArray();
         });
@@ -119,26 +117,7 @@ class GameApiController
     /**
      * @throws ApiException
      */
-    public function getUid(): ?string
-    {
-        $session = new SessionService();
-
-        if (isset($_GET['newSession'])) {
-            $session->clear();
-        }
-
-        if (!$uid = $session->get(self::UID_KEY)) {
-            $uid = $_GET['playerID'] ?? $this->assignNewPlayer();
-            $session->set(self::UID_KEY, $uid);
-        }
-
-        return $uid;
-    }
-
-    /**
-     * @throws ApiException
-     */
-    private function assignNewPlayer(): int
+    private function assignAndGetPlayerId(): int
     {
         $returnedId = new PlayerRepo($this->db)->insertAndGetID();
 
