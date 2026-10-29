@@ -32,6 +32,15 @@ final class Board
         );
     }
 
+    public static function dbToTokenList(false|array $tokens): array
+    {
+        if (!empty($tokens)) {
+            return array_map(fn($row) => Token::fromDB($row), $tokens);
+        } else {
+            return [];
+        }
+    }
+
     public function getTokens(): array {
         return $this->tokens;
     }

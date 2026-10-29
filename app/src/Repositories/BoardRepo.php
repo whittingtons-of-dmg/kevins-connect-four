@@ -3,7 +3,6 @@
 namespace MediumDubb\ConnectFour\Repositories;
 
 use Exception;
-use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\PDOConnector;
@@ -13,27 +12,9 @@ use PDOException;
 class BoardRepo
 {
     private const string TABLE = 'boards';
+    private const string TOKENS_TABLE = 'tokens';
 
     public function __construct(private readonly PDOConnector $db) {}
-
-    private function getBoardTokens(string|int $boardId): array|false
-    {
-        $stmt = $this->db->run(
-            "SELECT 
-                    board,
-                    player,
-                    board_column,
-                    board_row
-                    FROM " . self::TABLE ."
-                    WHERE board = :boardID
-                    ORDER BY board_column ASC, board_row ASC",
-            [
-                'boardID' => $boardId,
-            ]
-        );
-
-        return  $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
 
     /**
      * @throws ApiException
@@ -49,6 +30,26 @@ class BoardRepo
             );
 
             return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // todo For all DB exceptions we need to log exception error, but not return information to API response
+            throw new ApiException('Board lookup failed');
+        }
+    }
+
+    /**
+     * @throws ApiException
+     */
+    public function getBoardPlayer1(int $boardId): int|false
+    {
+        try {
+            $stmt = $this->db->run(
+                "SELECT player1 FROM " . self::TABLE . " WHERE id = :boardID LIMIT 1",
+                [
+                    ':boardID' => $boardId
+                ]
+            );
+
+            return $stmt->fetchColumn();
         } catch (PDOException $e) {
             // todo For all DB exceptions we need to log exception error, but not return information to API response
             throw new ApiException('Board lookup failed');
@@ -212,20 +213,29 @@ class BoardRepo
     /**
      * @throws ApiException
      */
-    public function getTokensByBoardID(string|int $boardID): array
+    public function getTokensByBoardID(int $boardId): array
     {
-        $filteredBoardId = filter_var($boardID, FILTER_VALIDATE_INT);
+        $filteredBoardId = filter_var($boardId, FILTER_VALIDATE_INT);
 
         if ($filteredBoardId === false)
             throw new GameValidationException('board ID is invalid', ['The board ID must be a positive integer']);
 
         try {
-            $tokens = $this->getBoardTokens($filteredBoardId);
-            if (!empty($tokens)) {
-                return array_map(fn($row) => Token::fromDB($row), $tokens);
-            } else {
-                return [];
-            }
+            $stmt = $this->db->run(
+                "SELECT 
+                    board,
+                    player,
+                    board_column,
+                    board_row
+                    FROM " . self::TOKENS_TABLE ."
+                    WHERE board = :boardID
+                    ORDER BY board_column ASC, board_row ASC",
+                [
+                    'boardID' => $boardId,
+                ]
+            );
+
+            return  $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             throw new ApiException('Failed to get tokens');
         }

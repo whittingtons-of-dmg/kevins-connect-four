@@ -2,6 +2,7 @@
 
 namespace MediumDubb\ConnectFour\Services;
 
+use Dotenv\Exception\ValidationException;
 use MediumDubb\ConnectFour\Domains\Board;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
@@ -68,6 +69,9 @@ class JoinRequestHandler
         if ($this->boardRepo->boardIsFull($this->boardId))
             throw new GameValidationException('The requested board is full');
 
+        if ($this->boardRepo->getBoardPlayer1($this->boardId) === $this->playerId)
+            throw new ValidationException("Player 1 and Player 2 must not share the same ID");
+
         $affectedRowCount = $this->boardRepo->joinAndGetRowCount($this->boardId, $this->playerId);
 
         if ($affectedRowCount === 0)
@@ -79,6 +83,8 @@ class JoinRequestHandler
             throw new GameValidationException("Failed to get the board");
 
         $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
+
+        $tokens = Board::dbToTokenList($tokens);
 
         return Board::fromDB($boardRow, $tokens);
     }

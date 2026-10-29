@@ -124,7 +124,8 @@ class DropRequestHandler
      */
     private function getBoardTokens(): array
     {
-        return $this->boardRepo->getTokensByBoardID($this->boardId);
+        $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
+        return Board::dbToTokenList($tokens);
     }
 
     private function matchEnded(Board $board): bool

@@ -3,6 +3,7 @@
 namespace MediumDubb\ConnectFour\Services;
 
 use MediumDubb\ConnectFour\Domains\Board;
+use MediumDubb\ConnectFour\Domains\Token;
 use MediumDubb\ConnectFour\Exceptions\ApiException;
 use MediumDubb\ConnectFour\Exceptions\GameValidationException;
 use MediumDubb\ConnectFour\PDOConnector;
@@ -58,6 +59,8 @@ readonly class GetterRequestHandler
             throw new GameValidationException( "Failed to get requested board");
 
         $tokens = $this->boardRepo->getTokensByBoardID($this->boardId);
+
+        $tokens = Board::dbToTokenList($tokens);
 
         return Board::fromDB($boardRow, $tokens);
     }
