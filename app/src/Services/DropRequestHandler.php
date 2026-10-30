@@ -152,7 +152,16 @@ class DropRequestHandler
      */
     private function setToken(Board $board, Token $token): void
     {
-        $this->tokenRepo->setToken($token);
+        $currentPlayerId = $this->boardRepo->getBoardCurrentPlayerId($board->getBoardID());
+
+        if ( $currentPlayerId === false || ($currentPlayerId !== $token->getPlayerId()) )
+            throw new GameValidationException("Invalid token request: It is not your turn");
+
+        $tokenSet = $this->tokenRepo->setToken($token);
+
+        if (!$tokenSet)
+            throw new GameConflictException("Token failed to set");
+
         $board->setToken($token);
     }
 
@@ -178,10 +187,11 @@ class DropRequestHandler
     {
         if ($winnerId = $this->getWinner($board)) {
             $winnerSet = $this->boardRepo->setBoardWinner($winnerId, $board->getBoardID());
-            if ($winnerSet)
-                $board->setWinner($winnerId);
-            else
+
+            if (!$winnerSet)
                 throw new GameConflictException('Failed to set winner');
+
+            $board->setWinner($winnerId);
         }
     }
 
@@ -195,7 +205,7 @@ class DropRequestHandler
      */
     private function getWinner(Board $board): bool|int
     {
-        $currentPlayer = $this->boardRepo->getBoardCurrentPlayerId($board->getBoardID());
+        $currentPlayer = $board->popToken()->getPlayerID(); // assuming we are grabbing the playerId from the token just set who we have already validated
         $tokenDbList = $this->boardRepo->getPlayerTokens($board->getBoardID(), $currentPlayer);
         $currentPlayerTokens = Board::getTokenObjectList($tokenDbList);
         $tokenPositionList = [];

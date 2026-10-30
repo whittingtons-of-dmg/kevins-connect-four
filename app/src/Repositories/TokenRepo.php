@@ -17,10 +17,10 @@ class TokenRepo
     /**
      * @throws ApiException
      */
-    public function setToken(Token $token): void
+    public function setToken(Token $token): bool
     {
         try {
-            $this->db->run(
+            $stmt = $this->db->run(
                 "INSERT INTO tokens 
                     (
                         board,
@@ -42,6 +42,8 @@ class TokenRepo
                     'board_row' => $token->getBoardRow()
                 ]
             );
+
+            return $stmt->rowCount() > 0;
         } catch (PDOException $e) {
             throw new ApiException('Failed to set token',);
         }
